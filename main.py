@@ -1,61 +1,105 @@
 # main.py
+"""
+The main entry point for the Shop Floor Scheduler application.
+
+This script performs the following steps:
+1.  Loads configuration from `config.ini` with error handling.
+2.  Loads data from Google Sheets using `data_loader`.
+3.  Runs all scheduling algorithms (simple heuristics + Genetic Algorithm).
+4.  For each result, it:
+    - Prints a performance summary to the console.
+    - Generates and displays a Gantt chart.
+    - Exports a detailed Excel report to the `output/` folder.
+"""
 from models import Job, Operation, Machine
 from visualization import create_gantt_chart
 from data_loader import load_data_from_gsheet
 from exporter import export_to_excel
+from genetic_algorithm import run_genetic_algorithm
 import copy
 import os
 import configparser
-from genetic_algorithm import run_genetic_algorithm
 
-# ... (All schedule functions: schedule_fcfs, spt, edd, wspt, are UNCHANGED) ...
-def schedule_fcfs(jobs: list[Job], machines: list[Machine], setup_time: int):
-    # ... (no change)
+def schedule_fcfs(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
+    """
+    Schedules jobs using the First-Come, First-Served (FCFS) algorithm.
+    This is the core scheduling engine that also handles all constraints.
+    
+    Args:
+        jobs (list[Job]): The list of jobs to schedule (in a specific order).
+        machines (list[Machine]): The list of available machines.
+        setup_time (int): The time required for machine setup.
+        
+    Returns:
+        list: The final, detailed schedule.
+    """
     schedule = []
-    machine_map = {m.machine_id: m for m in machines}
+    machine_map = {m.machine_id: m for m in machines} # For quick lookup
+
     for job in jobs:
-        current_job_end_time = 0
+        current_job_end_time = 0 # Tracks the completion of the *previous* operation for this job
         for i, operation in enumerate(job.operations):
             machine = machine_map[operation.machine_id]
-            setup_needed = machine.last_job_id is not None and machine.last_job_id != job.job_id
-            setup = setup_time if setup_needed else 0
+            
+            # Check if a setup is needed
+            setup = 0
+            if machine.last_job_id is not None and machine.last_job_id != job.job_id:
+                setup = setup_time
+            
+            # The operation can only start after the machine is free AND the previous step is done
             earliest_start = max(machine.available_at + setup, current_job_end_time)
+
+            # --- Downtime Conflict Check ---
+            # Find the first valid time slot after the earliest_start
             valid_start_time = earliest_start
             while True:
                 conflict_found = False
                 proposed_end_time = valid_start_time + operation.processing_time
-                for unavailable_start, unavailable_end in machine.unavailable_periods:
-                    if valid_start_time < unavailable_end and unavailable_start < proposed_end_time:
-                        valid_start_time = unavailable_end
+                
+                for down_start, down_end in machine.unavailable_periods:
+                    # Check for any overlap: (start1 < end2) and (start2 < end1)
+                    if valid_start_time < down_end and down_start < proposed_end_time:
+                        # Conflict! Push the start time to the end of the downtime
+                        valid_start_time = down_end
                         conflict_found = True
-                        break
+                        break # Re-check all downtime periods with the new start time
+                
                 if not conflict_found:
-                    break
+                    break # This time slot is valid
+            
             start_time = valid_start_time
             end_time = start_time + operation.processing_time
+            
+            # Add this step to the final schedule
             schedule.append((job.job_id, i, machine.machine_id, start_time, end_time))
+            
+            # Update machine and job states
             machine.available_at = end_time
             machine.last_job_id = job.job_id
             current_job_end_time = end_time
+            
     return schedule
 
-def schedule_spt(jobs: list[Job], machines: list[Machine], setup_time: int):
-    # ... (no change)
+def schedule_spt(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
+    """Schedules jobs using Shortest Processing Time (SPT) rule."""
+    # Sorts jobs by their total processing time (shortest first)
     sorted_jobs = sorted(jobs, key=lambda job: sum(op.processing_time for op in job.operations))
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
-def schedule_edd(jobs: list[Job], machines: list[Machine], setup_time: int):
-    # ... (no change)
+def schedule_edd(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
+    """Schedules jobs using Earliest Due Date (EDD) rule."""
+    # Sorts jobs by their due date (earliest first)
     sorted_jobs = sorted(jobs, key=lambda job: job.due_date)
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
-def schedule_wspt(jobs: list[Job], machines: list[Machine], setup_time: int):
-    # ... (no change)
+def schedule_wspt(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
+    """Schedules jobs using Weighted Shortest Processing Time (WSPT) rule."""
+    # Sorts jobs by (processing_time / priority)
     sorted_jobs = sorted(jobs, key=lambda job: sum(op.processing_time for op in job.operations) / job.priority)
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
 def print_schedule(schedule, jobs, title="Schedule"):
-    # ... (This function is unchanged)
+    """Prints a formatted summary of the schedule's performance to the console."""
     print(f"\n--- {title} ---")
     print("Job | Prio | Due Date | Completion | Tardiness")
     print("----------------------------------------------------")
@@ -68,7 +112,6 @@ def print_schedule(schedule, jobs, title="Schedule"):
     job_map = {job.job_id: job for job in jobs}
     total_tardiness = 0
     
-    # Sort jobs by completion time for logical output
     sorted_job_ids = sorted(job_completion_times.keys(), key=lambda j_id: job_completion_times[j_id])
 
     for job_id in sorted_job_ids:
@@ -85,87 +128,49 @@ def print_schedule(schedule, jobs, title="Schedule"):
     print(f"Total Tardiness: {total_tardiness}")
 
 
-# main.py
-
-# ... (all other functions: schedule_fcfs, schedule_spt, schedule_edd,
-# ...  schedule_wspt, and print_schedule remain UNCHANGED) ...
-
-
 if __name__ == "__main__":
-    # --- MODIFIED BLOCK FOR TODAY ---
     
+    # --- 1. Load Configuration ---
     config = configparser.ConfigParser()
-    
-    # Check if the config file exists first
     if not os.path.exists('config.ini'):
-        print("--- WARNING: 'config.ini' not found. ---")
-        print("Using default settings for the simulation.")
-        # Set all default values manually
+        print("--- WARNING: 'config.ini' not found. Using default settings. ---")
         SETUP_TIME = 2
         OUTPUT_FOLDER = 'output'
-        GA_POP_SIZE = 30
-        GA_NUM_GEN = 50
-        GA_MUT_RATE = 0.1
-        GA_TOURN_SIZE = 3
-        GA_W_MAKESPAN = 0.6
-        GA_W_TARDINESS = 0.4
+        GA_POP_SIZE, GA_NUM_GEN, GA_MUT_RATE, GA_TOURN_SIZE = 30, 50, 0.1, 3
+        GA_W_MAKESPAN, GA_W_TARDINESS = 0.6, 0.4
     else:
         print("Reading configuration from config.ini...")
         config.read('config.ini')
         
-        # Read settings with error handling for each value
-        try:
-            SETUP_TIME = config.getint('Settings', 'setup_time')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'setup_time' missing or invalid in config.ini. Using default: 2")
-            SETUP_TIME = 2
-            
-        try:
-            OUTPUT_FOLDER = config.get('Paths', 'output_folder')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            print("Warning: 'output_folder' missing in config.ini. Using default: 'output'")
-            OUTPUT_FOLDER = 'output'
+        # Read settings with error handling and defaults
+        try: SETUP_TIME = config.getint('Settings', 'setup_time')
+        except: SETUP_TIME = 2; print("Warning: 'setup_time' missing. Using default: 2")
+        
+        try: OUTPUT_FOLDER = config.get('Paths', 'output_folder')
+        except: OUTPUT_FOLDER = 'output'; print("Warning: 'output_folder' missing. Using default: 'output'")
 
-        # Read Genetic Algorithm settings
-        try:
-            GA_POP_SIZE = config.getint('GeneticAlgorithm', 'population_size')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'population_size' missing or invalid. Using default: 30")
-            GA_POP_SIZE = 30
+        try: GA_POP_SIZE = config.getint('GeneticAlgorithm', 'population_size')
+        except: GA_POP_SIZE = 30; print("Warning: 'population_size' missing. Using default: 30")
 
-        try:
-            GA_NUM_GEN = config.getint('GeneticAlgorithm', 'num_generations')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'num_generations' missing or invalid. Using default: 50")
-            GA_NUM_GEN = 50
+        try: GA_NUM_GEN = config.getint('GeneticAlgorithm', 'num_generations')
+        except: GA_NUM_GEN = 50; print("Warning: 'num_generations' missing. Using default: 50")
 
-        try:
-            GA_MUT_RATE = config.getfloat('GeneticAlgorithm', 'mutation_rate')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'mutation_rate' missing or invalid. Using default: 0.1")
-            GA_MUT_RATE = 0.1
+        try: GA_MUT_RATE = config.getfloat('GeneticAlgorithm', 'mutation_rate')
+        except: GA_MUT_RATE = 0.1; print("Warning: 'mutation_rate' missing. Using default: 0.1")
 
-        try:
-            GA_TOURN_SIZE = config.getint('GeneticAlgorithm', 'tournament_size')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'tournament_size' missing or invalid. Using default: 3")
-            GA_TOURN_SIZE = 3
+        try: GA_TOURN_SIZE = config.getint('GeneticAlgorithm', 'tournament_size')
+        except: GA_TOURN_SIZE = 3; print("Warning: 'tournament_size' missing. Using default: 3")
 
-        try:
-            GA_W_MAKESPAN = config.getfloat('GeneticAlgorithm', 'makespan_weight')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'makespan_weight' missing or invalid. Using default: 0.6")
-            GA_W_MAKESPAN = 0.6
+        try: GA_W_MAKESPAN = config.getfloat('GeneticAlgorithm', 'makespan_weight')
+        except: GA_W_MAKESPAN = 0.6; print("Warning: 'makespan_weight' missing. Using default: 0.6")
 
-        try:
-            GA_W_TARDINESS = config.getfloat('GeneticAlgorithm', 'tardiness_weight')
-        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
-            print("Warning: 'tardiness_weight' missing or invalid. Using default: 0.4")
-            GA_W_TARDINESS = 0.4
+        try: GA_W_TARDINESS = config.getfloat('GeneticAlgorithm', 'tardiness_weight')
+        except: GA_W_TARDINESS = 0.4; print("Warning: 'tardiness_weight' missing. Using default: 0.4")
 
-    # --- This part below is unchanged, it just uses the values from above ---
+    # --- 2. Load Data ---
     machines, jobs_data = load_data_from_gsheet('ShopFloorData')
     
+    # --- 3. Run Simple Schedulers ---
     simple_schedulers = { 
         "FCFS": schedule_fcfs, 
         "SPT": schedule_spt, 
@@ -176,23 +181,20 @@ if __name__ == "__main__":
     print(f"--- Running Simple Schedulers (Setup Time: {SETUP_TIME}) ---")
     
     for name, func in simple_schedulers.items():
-        machine_copy = copy.deepcopy(machines)
+        machine_copy = copy.deepcopy(machines) # Deepcopy ensures each algo gets fresh machines
         schedule_result = func(jobs_data, machine_copy, SETUP_TIME)
+        
         print_schedule(schedule_result, jobs_data, f"{name} Schedule")
         create_gantt_chart(schedule_result, f"{name} Schedule")
+        
         output_filename = os.path.join(OUTPUT_FOLDER, f'{name}_schedule.xlsx')
         export_to_excel(schedule_result, jobs_data, output_filename)
         
+    # --- 4. Run the Genetic Algorithm ---
     ga_schedule = run_genetic_algorithm(
-        jobs_data, 
-        copy.deepcopy(machines), 
-        SETUP_TIME,
-        GA_POP_SIZE,
-        GA_NUM_GEN,
-        GA_MUT_RATE,
-        GA_TOURN_SIZE,
-        GA_W_MAKESPAN,
-        GA_W_TARDINESS
+        jobs_data, copy.deepcopy(machines), SETUP_TIME,
+        GA_POP_SIZE, GA_NUM_GEN, GA_MUT_RATE, GA_TOURN_SIZE,
+        GA_W_MAKESPAN, GA_W_TARDINESS
     )
     
     print_schedule(ga_schedule, jobs_data, "Genetic Algorithm Schedule")

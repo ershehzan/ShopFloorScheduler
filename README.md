@@ -33,8 +33,42 @@ The core of this project is a multi-objective **Genetic Algorithm (GA)** that in
 4.  **Evolve Solution**: The `genetic_algorithm.py` module creates an initial population of random schedules and evolves them over 50 generations, using selection, crossover, and mutation to find a near-optimal solution based on the multi-objective fitness score.
 5.  **Generate Output**: The `exporter.py` and `visualization.py` modules take the final schedules and save them as `.xlsx` files and Gantt chart images in the `output/` folder.
 
-## 🛠️ [Installation & Setup - We will write this tomorrow]
+## 🛠️ Installation & Setup
 
-## Usage
+Follow these steps to set up and run the project on your local machine.
 
-[How to run the program - We will write this tomorrow]
+### 1. Prerequisites
+* Python 3.8 or newer
+* A Google Cloud account
+* A Google Sheet (you can copy [this template](https://docs.google.com/spreadsheets/d/YOUR_SHEET_URL/edit?usp=sharing))
+
+### 2. Clone & Install
+```bash
+# 1. Clone the repository
+git clone [https://github.com/ershehzan/ShopFloorScheduler.git](https://github.com/ershehzan/ShopFloorScheduler.git)
+cd ShopFloorScheduler
+
+# 2. Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows, use: .\.venv\Scripts\activate
+
+# 3. Install the required libraries
+pip install pandas openpyxl matplotlib gspread google-auth-oauthlib
+
+🚀 How to Use the Program
+1. Configure Your Input
+Google Sheet (ShopFloorData):
+
+Machines Sheet: Must have columns machine_id and unavailable_periods (e.g., 10-15;40-45).
+
+Jobs Sheet: Must have columns job_id, operations (e.g., 0(5);2(8)), due_date, and priority.
+
+Config File (config.ini):
+
+[Settings]: Change the setup_time for machines.
+
+[GeneticAlgorithm]: Adjust the behavior of the GA, including population_size, num_generations, and the fitness weights (makespan_weight, tardiness_weight).
+
+2. Run the Scheduler
+With your virtual environment active, simply run:
+python main.py
