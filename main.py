@@ -4,7 +4,7 @@ The main entry point for the Shop Floor Scheduler application.
 
 This script performs the following steps:
 1.  Loads configuration from `config.ini` with error handling.
-2.  Loads data from Google Sheets using `data_loader`.
+2.  Loads data from the specified source (Excel or Google Sheets).
 3.  Runs all scheduling algorithms (simple heuristics + Genetic Algorithm).
 4.  For each result, it:
     - Prints a performance summary to the console.
@@ -13,91 +13,74 @@ This script performs the following steps:
 """
 from models import Job, Operation, Machine
 from visualization import create_gantt_chart
-from data_loader import load_data_from_gsheet
+# --- CHANGE 1: Import the correct function ---
+from data_loader import load_data_from_excel
 from exporter import export_to_excel
 from genetic_algorithm import run_genetic_algorithm
 import copy
 import os
 import configparser
 
+# --- CORE SCHEDULING ENGINE ---
 def schedule_fcfs(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
     """
     Schedules jobs using the First-Come, First-Served (FCFS) algorithm.
     This is the core scheduling engine that also handles all constraints.
-    
-    Args:
-        jobs (list[Job]): The list of jobs to schedule (in a specific order).
-        machines (list[Machine]): The list of available machines.
-        setup_time (int): The time required for machine setup.
-        
-    Returns:
-        list: The final, detailed schedule.
     """
     schedule = []
-    machine_map = {m.machine_id: m for m in machines} # For quick lookup
+    machine_map = {m.machine_id: m for m in machines}
 
     for job in jobs:
-        current_job_end_time = 0 # Tracks the completion of the *previous* operation for this job
+        current_job_end_time = 0
         for i, operation in enumerate(job.operations):
             machine = machine_map[operation.machine_id]
             
-            # Check if a setup is needed
             setup = 0
             if machine.last_job_id is not None and machine.last_job_id != job.job_id:
                 setup = setup_time
             
-            # The operation can only start after the machine is free AND the previous step is done
             earliest_start = max(machine.available_at + setup, current_job_end_time)
 
-            # --- Downtime Conflict Check ---
-            # Find the first valid time slot after the earliest_start
             valid_start_time = earliest_start
             while True:
                 conflict_found = False
                 proposed_end_time = valid_start_time + operation.processing_time
-                
                 for down_start, down_end in machine.unavailable_periods:
-                    # Check for any overlap: (start1 < end2) and (start2 < end1)
                     if valid_start_time < down_end and down_start < proposed_end_time:
-                        # Conflict! Push the start time to the end of the downtime
                         valid_start_time = down_end
                         conflict_found = True
-                        break # Re-check all downtime periods with the new start time
-                
+                        break
                 if not conflict_found:
-                    break # This time slot is valid
+                    break
             
             start_time = valid_start_time
             end_time = start_time + operation.processing_time
             
-            # Add this step to the final schedule
             schedule.append((job.job_id, i, machine.machine_id, start_time, end_time))
             
-            # Update machine and job states
             machine.available_at = end_time
             machine.last_job_id = job.job_id
             current_job_end_time = end_time
             
     return schedule
 
+# --- SIMPLE HEURISTICS ---
 def schedule_spt(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
     """Schedules jobs using Shortest Processing Time (SPT) rule."""
-    # Sorts jobs by their total processing time (shortest first)
     sorted_jobs = sorted(jobs, key=lambda job: sum(op.processing_time for op in job.operations))
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
 def schedule_edd(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
     """Schedules jobs using Earliest Due Date (EDD) rule."""
-    # Sorts jobs by their due date (earliest first)
     sorted_jobs = sorted(jobs, key=lambda job: job.due_date)
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
 def schedule_wspt(jobs: list[Job], machines: list[Machine], setup_time: int) -> list:
     """Schedules jobs using Weighted Shortest Processing Time (WSPT) rule."""
-    # Sorts jobs by (processing_time / priority)
     sorted_jobs = sorted(jobs, key=lambda job: sum(op.processing_time for op in job.operations) / job.priority)
     return schedule_fcfs(sorted_jobs, machines, setup_time)
 
+# --- OUTPUT FUNCTION ---
 def print_schedule(schedule, jobs, title="Schedule"):
     """Prints a formatted summary of the schedule's performance to the console."""
     print(f"\n--- {title} ---")
@@ -127,7 +110,7 @@ def print_schedule(schedule, jobs, title="Schedule"):
     print(f"Makespan (Total Time): {makespan}")
     print(f"Total Tardiness: {total_tardiness}")
 
-
+# --- MAIN EXECUTION BLOCK ---
 if __name__ == "__main__":
     
     # --- 1. Load Configuration ---
@@ -168,7 +151,9 @@ if __name__ == "__main__":
         except: GA_W_TARDINESS = 0.4; print("Warning: 'tardiness_weight' missing. Using default: 0.4")
 
     # --- 2. Load Data ---
-    machines, jobs_data = load_data_from_gsheet('ShopFloorData')
+    # --- CHANGE 2: Call the Excel function ---
+    print("Loading data from data.xlsx...")
+    machines, jobs_data = load_data_from_excel('data.xlsx')
     
     # --- 3. Run Simple Schedulers ---
     simple_schedulers = { 
