@@ -2,36 +2,36 @@
 
 ## 📖 Overview
 
-This is a comprehensive, command-line application built in pure Python to solve complex shop floor scheduling problems. This tool takes real-world inputs (jobs, machines, and constraints) from a Google Sheet, calculates optimized schedules using multiple algorithms, and exports the results, including visual Gantt charts and performance reports, to Excel.
+This is a comprehensive, command-line application built in pure Python to solve complex shop floor scheduling problems. This tool takes real-world inputs (jobs, machines, and constraints) from a local **Excel file (`data.xlsx`)**, calculates optimized schedules using multiple algorithms, and exports the results, including visual Gantt charts and performance reports, back to Excel.
 
-The core of this project is a multi-objective **Genetic Algorithm (GA)** that intelligently balances two competing factory goals: minimizing the total production time (**makespan**) and minimizing job lateness (**tardiness**).
+The core of this project is a multi-objective **Genetic Algorithm (GA)** that intelligently balances two competing factory goals: minimizing the total production time (**makespan**) and minimizing job lateness (**tardiess**).
 
 ## ✨ Key Features
 
-* **Cloud-Based Input**: Reads all data directly from a Google Sheet using the Google Sheets API.
+* **Local Excel Input**: Reads all data directly from `data.xlsx` using `pandas`.
 * **Realistic Constraints**: The scheduling engine accurately handles:
-    * **Machine Downtime**: Schedules work *around* predefined maintenance windows.
-    * **Setup Times**: Automatically adds time when a machine switches between different jobs.
+    * **Machine Downtime**: Schedules work *around* predefined maintenance windows specified in Excel.
+    * **Setup Times**: Automatically adds time when a machine switches between different jobs, configured via `config.ini`.
 * **Multiple Scheduling Algorithms**:
     * **Simple Rules**: First-Come First-Served (FCFS), Shortest Processing Time (SPT), Earliest Due Date (EDD), and Weighted Shortest Processing Time (WSPT).
     * **Advanced AI**: A complete **Genetic Algorithm (GA)** built from scratch.
-* **Multi-Objective Optimization**: The Genetic Algorithm is configurable to find the "best" schedule by balancing a weighted score between **makespan** and **tardiness**.
+* **Multi-Objective Optimization**: The Genetic Algorithm is configurable via `config.ini` to find the "best" schedule by balancing a weighted score between **makespan** and **tardiess**.
 * **Professional Output**: For each algorithm, the program automatically generates:
     * A **Gantt Chart** visualization (using `matplotlib`).
-    * A detailed **Excel Report** with a full schedule and performance metrics (using `pandas`).
+    * A detailed **Excel Report** with a full schedule and performance metrics (using `pandas`), saved in the `output/` folder.
 * **Robust & Configurable**:
-    * All key settings (like `setup_time` and GA weights) are controlled via an external `config.ini` file.
-    * Includes robust error handling for missing files, bad data, and API connection issues.
+    * All key settings (like `setup_time` and GA weights) are controlled via the external `config.ini` file.
+    * Includes robust error handling for missing files, bad data formats, and incorrect configurations.
 
 ## 🚀 How It Works
 
-[Architecture Diagram - We will add this later]
+[Architecture Diagram - Placeholder]
 
-1.  **Load Data**: The `data_loader.py` securely connects to the Google Sheets API using `credentials.json`, fetches the job and machine data, and parses it into Python objects.
-2.  **Read Config**: The `main.py` script reads settings like `setup_time` and GA fitness weights from `config.ini`.
+1.  **Load Data**: The `data_loader.py` module reads the `Machines` and `Jobs` sheets from `data.xlsx` using `pandas` and parses the data into Python objects (`Machine`, `Job`, `Operation`).
+2.  **Read Config**: The `main.py` script reads settings like `setup_time` and GA fitness weights from `config.ini`, using default values if the file or settings are missing.
 3.  **Run Schedulers**: The application runs all scheduling algorithms (FCFS, SPT, EDD, WSPT) on the dataset.
-4.  **Evolve Solution**: The `genetic_algorithm.py` module creates an initial population of random schedules and evolves them over 50 generations, using selection, crossover, and mutation to find a near-optimal solution based on the multi-objective fitness score.
-5.  **Generate Output**: The `exporter.py` and `visualization.py` modules take the final schedules and save them as `.xlsx` files and Gantt chart images in the `output/` folder.
+4.  **Evolve Solution**: The `genetic_algorithm.py` module creates an initial population of random schedules and evolves them over multiple generations (configured in `config.ini`), using selection, crossover, and mutation to find a near-optimal solution based on the multi-objective fitness score.
+5.  **Generate Output**: The `exporter.py` and `visualization.py` modules take the final schedules and save them as `.xlsx` files and display Gantt chart images.
 
 ## 🛠️ Installation & Setup
 
@@ -39,8 +39,7 @@ Follow these steps to set up and run the project on your local machine.
 
 ### 1. Prerequisites
 * Python 3.8 or newer
-* A Google Cloud account
-* A Google Sheet (you can copy [this template](https://docs.google.com/spreadsheets/d/YOUR_SHEET_URL/edit?usp=sharing))
+* Microsoft Excel or a compatible spreadsheet program
 
 ### 2. Clone & Install
 ```bash
@@ -50,25 +49,10 @@ cd ShopFloorScheduler
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows, use: .\.venv\Scripts\activate
+# On Windows:
+.\.venv\Scripts\activate
+# On macOS/Linux:
+# source .venv/bin/activate
 
 # 3. Install the required libraries
-pip install pandas openpyxl matplotlib gspread google-auth-oauthlib
-
-🚀 How to Use the Program
-1. Configure Your Input
-Google Sheet (ShopFloorData):
-
-Machines Sheet: Must have columns machine_id and unavailable_periods (e.g., 10-15;40-45).
-
-Jobs Sheet: Must have columns job_id, operations (e.g., 0(5);2(8)), due_date, and priority.
-
-Config File (config.ini):
-
-[Settings]: Change the setup_time for machines.
-
-[GeneticAlgorithm]: Adjust the behavior of the GA, including population_size, num_generations, and the fitness weights (makespan_weight, tardiness_weight).
-
-2. Run the Scheduler
-With your virtual environment active, simply run:
-python main.py
+pip install pandas openpyxl matplotlib
