@@ -57,6 +57,6 @@ python -m venv .venv
 # 3. Install the required libraries
 pip install pandas openpyxl matplotlib
 
-**Shehzan Khan**
+### Shehzan Khan
 💻 *Aspiring Software Developer | Problem Solver*
 📫 [GitHub](https://github.com/ershehzan) | [LinkedIn](https://www.linkedin.com/in/shehzankhan/)
