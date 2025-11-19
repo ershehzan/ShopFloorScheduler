@@ -32,6 +32,14 @@ The core of this project is a multi-objective **Genetic Algorithm (GA)** that in
 3.  **Run Schedulers**: The application runs all scheduling algorithms (FCFS, SPT, EDD, WSPT) on the dataset.
 4.  **Evolve Solution**: The `genetic_algorithm.py` module creates an initial population of random schedules and evolves them over multiple generations (configured in `config.ini`), using selection, crossover, and mutation to find a near-optimal solution based on the multi-objective fitness score.
 5.  **Generate Output**: The `exporter.py` and `visualization.py` modules take the final schedules and save them as `.xlsx` files and display Gantt chart images.
+<<<<<<< HEAD
+=======
+
+  ## Author
+   ### Shehzan Khan
+💻 *Aspiring Software Developer | Problem Solver*
+📫 [GitHub](https://github.com/ershehzan) | [LinkedIn](https://www.linkedin.com/in/shehzankhan/)
+>>>>>>> ec5e38ac9af819bc60e7b670a6a103dd3ee8fd51
 
 ## 🛠️ Installation & Setup
 
@@ -55,4 +63,10 @@ python -m venv .venv
 # source .venv/bin/activate
 
 # 3. Install the required libraries
+<<<<<<< HEAD
 pip install pandas openpyxl matplotlib
+=======
+pip install pandas openpyxl matplotlib
+
+
+>>>>>>> ec5e38ac9af819bc60e7b670a6a103dd3ee8fd51
