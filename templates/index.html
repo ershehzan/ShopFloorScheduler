@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>PyShop Scheduler</title> <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>PyShop Scheduler</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
   </head>
@@ -13,36 +15,74 @@
       <div class="container">
         <a class="navbar-brand" href="/">
           <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-          <span>PyShop Scheduler</span> </a>
+          <span>PyShop Scheduler</span>
+        </a>
       </div>
     </nav>
 
     <div style="height: 100px;"></div>
 
-    <div class="container">
+    <div class="container mb-5">
       <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
+        <div class="col-md-10 col-lg-8">
           
-          <div class="text-center mb-5">
+          <div class="text-center mb-4">
             <h1 class="display-5 fw-bold" style="color: var(--brand-primary);">Smart Scheduling</h1>
-            <p class="lead text-muted">Optimize shop floor </p>
+            <p class="lead text-muted">Configure your parameters and optimize your shop floor.</p>
           </div>
 
           <div class="card card-custom">
             <div class="card-header-custom text-center">
-              Upload Schedule Data
+              Configuration & Upload
             </div>
-            <div class="card-body p-5">
+            <div class="card-body p-4">
               
               <form action="/upload" method="POST" enctype="multipart/form-data">
                 
+                <h5 class="mb-3" style="color: var(--brand-primary);">⚙️ Algorithm Settings</h5>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="setup_time" class="form-label small text-muted">Setup Time (Units)</label>
+                        <input type="number" class="form-control" name="setup_time" id="setup_time" value="2" required>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="pop_size" class="form-label small text-muted">Population Size</label>
+                        <input type="number" class="form-control" name="pop_size" id="pop_size" value="30" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="generations" class="form-label small text-muted">Generations</label>
+                        <input type="number" class="form-control" name="generations" id="generations" value="50" required>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded mb-4 border">
+                    <label class="form-label fw-bold mb-2" style="color: var(--brand-secondary);">Optimization Priority (Weights)</label>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Makespan Weight (0.0 - 1.0)</label>
+                            <input type="number" step="0.1" min="0" max="1" class="form-control" name="w_makespan" value="0.6">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Tardiness Weight (0.0 - 1.0)</label>
+                            <input type="number" step="0.1" min="0" max="1" class="form-control" name="w_tardiness" value="0.4">
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">Weights should roughly add up to 1.0. Higher weight = higher priority.</div>
+                </div>
+
+                <hr class="my-4">
+
                 <div class="mb-4 text-center">
-                  <label for="file" class="form-label d-block mb-3 text-muted">Select your <strong>data.xlsx</strong> file</label>
+                  <label for="file" class="form-label d-block mb-2 fw-bold" style="color: var(--brand-primary);">Upload Data File</label>
+                  <p class="small text-muted mb-2">Select your <strong>data.xlsx</strong> file</p>
                   <input class="form-control form-control-lg" type="file" name="file" id="file" required>
                 </div>
 
                 <div class="d-grid gap-2">
-                  <button type="submit" class="btn btn-brand btn-lg">
+                  <button type="submit" class="btn btn-brand btn-lg shadow-sm">
                     Run Optimization Engine 🚀
                   </button>
                 </div>
