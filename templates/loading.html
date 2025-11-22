@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Processing...</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #2c3e50; /* Dark Blue */
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="text-center">
+        <div class="loader"></div>
+        <h2 class="text-secondary">AI is Optimizing...</h2>
+        <p class="text-muted">This may take up to a minute based on your settings.</p>
+        <p class="small text-muted">Gen: <span id="status-text">Initializing...</span></p>
+    </div>
+
+    <script>
+        // This ID identifies YOUR specific run
+        const taskId = "{{ task_id }}";
+
+        // Function to check status
+        function checkStatus() {
+            fetch(`/status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.state === 'complete') {
+                        // If done, go to results!
+                        window.location.href = `/results/${taskId}`;
+                    } else {
+                        // If not done, update text and wait
+                        document.getElementById('status-text').innerText = data.message;
+                    }
+                });
+        }
+
+        // Run checkStatus every 2 seconds (2000 milliseconds)
+        setInterval(checkStatus, 2000);
+    </script>
+  </body>
+</html>
