@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, send_file
 
 # --- Custom Modules ---
 from data_loader import load_data_from_excel
-from main import schedule_spt # We are still using SPT for one more day
+from genetic_algorithm import run_genetic_algorithm # <--- NEW IMPORT
 from visualization import create_gantt_chart
 from exporter import export_to_excel
 from models import Machine 
@@ -42,25 +42,39 @@ def upload_file():
             return f"Error loading Excel: {e}", 500
 
         # --- 2. Read Settings from HTML Form ---
-        # We use 'request.form.get(name, default_value)'
         try:
             setup_time = int(request.form.get('setup_time', 2))
-            
-            # We will use these GA settings tomorrow, getting them ready now:
             pop_size = int(request.form.get('pop_size', 30))
             generations = int(request.form.get('generations', 50))
+            
+            # We don't need these inputs on the UI yet, but the GA needs them
+            # We'll hardcode mutation and tournament size for now or you can add inputs later
+            mutation_rate = 0.1 
+            tournament_size = 3
+            
             w_makespan = float(request.form.get('w_makespan', 0.6))
             w_tardiness = float(request.form.get('w_tardiness', 0.4))
             
         except ValueError:
             return "Error: Invalid number provided in settings.", 400
 
-        # --- 3. Run Scheduler ---
-        # NOTE: Today we are still running SPT to test the input.
-        # SPT only uses 'setup_time'. Tomorrow we connect the GA!
+        # --- 3. Run The Genetic Algorithm ---
+        # This might take some time (30-60 seconds)!
         
         machines_copy = copy.deepcopy(machines)
-        schedule_result = schedule_spt(jobs_data, machines_copy, setup_time)
+        
+        # Calling the GA with all the parameters from the form
+        schedule_result = run_genetic_algorithm(
+            jobs_data, 
+            machines_copy, 
+            setup_time,
+            pop_size,
+            generations,
+            mutation_rate,
+            tournament_size,
+            w_makespan,
+            w_tardiness
+        )
         
         # --- 4. Metrics & Output ---
         makespan = max(op[4] for op in schedule_result) if schedule_result else 0
@@ -74,7 +88,7 @@ def upload_file():
         # Save assets
         chart_filename = 'result_chart.png'
         chart_path = os.path.join('static', chart_filename)
-        create_gantt_chart(schedule_result, "Optimized Schedule", save_path=chart_path)
+        create_gantt_chart(schedule_result, "Genetic Algorithm Schedule", save_path=chart_path)
         
         excel_filename = 'optimized_schedule.xlsx'
         excel_path = os.path.join(app.config['OUTPUT_FOLDER'], excel_filename)
