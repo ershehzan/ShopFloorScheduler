@@ -22,12 +22,11 @@ This tool helps factory managers optimize production by intelligently balancing 
 * **Interactive Dashboard:** Built with **Flask** and **Bootstrap 5**.
 * **Drag-and-Drop Upload:** Easily upload Excel schedule data.
 * **Visual Gantt Charts:** Automatically generates and displays detailed production timelines.
-* **ROI Analysis:** Calculates and displays the percentage improvement against baseline methods (FCFS).
 * **Detailed Reports:** View row-by-row schedule data or download full Excel reports.
 
 ### ⚙️ Dynamic Configuration
 * **User Controls:** Adjust population size, generations, and fitness weights directly from the UI.
-* **Asynchronous Processing:** Features a real-time loading screen for handling long-running AI tasks.
+* **Asynchronous Processing:** Features a real-time loading screen for handling long-running tasks.
 
 ---
 
