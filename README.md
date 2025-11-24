@@ -48,7 +48,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ````
 
-*(Note: If you don't have a `requirements.txt`, install manually: `pip install flask pandas openpyxl matplotlib`)*
+###*(Note: If you don't have a `requirements.txt`, install manually: `pip install flask pandas openpyxl matplotlib`)*
 
 ### 2\. Prepare Data
 
