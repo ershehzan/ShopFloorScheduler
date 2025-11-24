@@ -49,7 +49,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 (Note: If you don't have a requirements.txt, install manually: pip install flask pandas openpyxl matplotlib)
 
-2. Prepare Data
+###2. Prepare Data
 Your input file must be an Excel file (.xlsx) with two sheets:
 
 Machines: Columns: machine_id, unavailable_periods
