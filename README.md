@@ -48,39 +48,3 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 (Note: If you don't have a requirements.txt, install manually: pip install flask pandas openpyxl matplotlib)
-
-###2. Prepare Data
-Your input file must be an Excel file (.xlsx) with two sheets:
-
-Machines: Columns: machine_id, unavailable_periods
-
-Jobs: Columns: job_id, operations, due_date, priority
-
-3. Run the Application
-Bash
-
-python app.py
-Open your browser and navigate to: http://127.0.0.1:5000
-
-🛠️ Tech Stack
-Backend: Python, Pandas (Data Processing), Matplotlib (Visualization)
-
-Frontend: HTML5, CSS3, Bootstrap 5, JavaScript (Polling)
-
-Web Framework: Flask
-
-Algorithms: Genetic Algorithm, Heuristics (SPT, EDD, WSPT)
-
-© 2025 Shehzan Khan. Created as a personal portfolio project.
-
-
----
-
-### **Final Step: Push to GitHub**
-
-Once you have updated the file, run these commands to save everything to GitHub:
-
-```bash
-git add README.md
-git commit -m "Update README to showcase Web Application features"
-git push origin main
