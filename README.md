@@ -79,16 +79,3 @@ Open your browser and navigate to: **`http://127.0.0.1:5000`**
 
 © 2025 Shehzan Khan. Created as a personal portfolio project.
 
-````
-
----
-
-### **Final Step: Push to GitHub**
-
-Once you have updated the file, run these commands to save everything to GitHub:
-
-```bash
-git add README.md
-git commit -m "Update README to showcase Web Application features"
-git push origin main
-````
