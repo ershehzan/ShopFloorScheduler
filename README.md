@@ -1,4 +1,4 @@
-# PyShop Scheduler: Shop Floor Optimization 🏭
+# PyShop Scheduler : Shop Floor Scheduling Optimization 🏭
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-Web%20App-green)
@@ -22,12 +22,11 @@ This tool helps factory managers optimize production by intelligently balancing 
 * **Interactive Dashboard:** Built with **Flask** and **Bootstrap 5**.
 * **Drag-and-Drop Upload:** Easily upload Excel schedule data.
 * **Visual Gantt Charts:** Automatically generates and displays detailed production timelines.
-* **ROI Analysis:** Calculates and displays the percentage improvement against baseline methods (FCFS).
 * **Detailed Reports:** View row-by-row schedule data or download full Excel reports.
 
 ### ⚙️ Dynamic Configuration
 * **User Controls:** Adjust population size, generations, and fitness weights directly from the UI.
-* **Asynchronous Processing:** Features a real-time loading screen for handling long-running AI tasks.
+* **Asynchronous Processing:** Features a real-time loading screen for handling long-running tasks.
 
 ---
 
@@ -47,40 +46,35 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-(Note: If you don't have a requirements.txt, install manually: pip install flask pandas openpyxl matplotlib)
+````
 
-2. Prepare Data
-Your input file must be an Excel file (.xlsx) with two sheets:
+*(Note: If you don't have a `requirements.txt`, install manually: `pip install flask pandas openpyxl matplotlib`)*
 
-Machines: Columns: machine_id, unavailable_periods
+### 2\. Prepare Data
 
-Jobs: Columns: job_id, operations, due_date, priority
+Your input file must be an Excel file (`.xlsx`) with two sheets:
 
-3. Run the Application
-Bash
+  * **`Machines`**: Columns: `machine_id`, `unavailable_periods`
+  * **`Jobs`**: Columns: `job_id`, `operations`, `due_date`, `priority`
 
+### 3\. Run the Application
+
+```bash
 python app.py
-Open your browser and navigate to: http://127.0.0.1:5000
+```
 
-🛠️ Tech Stack
-Backend: Python, Pandas (Data Processing), Matplotlib (Visualization)
+Open your browser and navigate to: **`http://127.0.0.1:5000`**
 
-Frontend: HTML5, CSS3, Bootstrap 5, JavaScript (Polling)
+-----
 
-Web Framework: Flask
+## 🛠️ Tech Stack
 
-Algorithms: Genetic Algorithm, Heuristics (SPT, EDD, WSPT)
+  * **Backend:** Python, Pandas (Data Processing), Matplotlib (Visualization)
+  * **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (Polling)
+  * **Web Framework:** Flask
+  * **Algorithms:** Genetic Algorithm, Heuristics (SPT, EDD, WSPT)
+
+-----
 
 © 2025 Shehzan Khan. Created as a personal portfolio project.
 
-
----
-
-### **Final Step: Push to GitHub**
-
-Once you have updated the file, run these commands to save everything to GitHub:
-
-```bash
-git add README.md
-git commit -m "Update README to showcase Web Application features"
-git push origin main
