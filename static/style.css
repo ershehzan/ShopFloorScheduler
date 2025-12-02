@@ -11,7 +11,8 @@
     --bg-color: #f4f7f6;
 }
 
-body {
+body 
+{
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
     color: #333;
