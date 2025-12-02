@@ -1,6 +1,7 @@
 # main.py
 """
 The main entry point for the Shop Floor Scheduler application.
+
 This script performs the following steps:
 1.  Loads configuration from `config.ini` with error handling.
 2.  Loads data from the specified source (Excel or Google Sheets).
