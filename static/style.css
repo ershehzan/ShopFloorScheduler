@@ -27,7 +27,8 @@ body
     padding: 1rem 0;
 }
 
-.navbar-brand {
+.navbar-brand 
+{
     font-weight: 600;
     color: var(--brand-primary) !important;
     font-size: 1.5rem;
