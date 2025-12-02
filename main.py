@@ -13,7 +13,7 @@ This script performs the following steps:
 """
 from models import Job, Operation, Machine
 from visualization import create_gantt_chart
-
+ 
 # --- CHANGE 1: Import the correct function ---
 from data_loader import load_data_from_excel
 from exporter import export_to_excel
