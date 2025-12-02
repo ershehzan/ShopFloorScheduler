@@ -3,7 +3,8 @@
 /* 1. Import a modern font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
 
-:root {
+:root 
+{
     /* Define your Brand Colors here */
     --brand-primary: #2c3e50; /* Elegant Dark Blue */
     --brand-secondary: #34495e;
