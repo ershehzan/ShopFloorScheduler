@@ -36,7 +36,8 @@ body
     align-items: center;
 }
 
-.navbar-brand img {
+.navbar-brand img 
+{
     height: 40px; /* Adjust based on your logo size */
     margin-right: 10px;
 }
