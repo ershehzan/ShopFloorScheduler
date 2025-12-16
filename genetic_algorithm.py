@@ -1,4 +1,4 @@
-# genetic_algorithm.py
+ # genetic_algorithm.py
 """
 Contains all logic for the multi-objective Genetic Algorithm (GA).
 
