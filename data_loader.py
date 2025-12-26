@@ -1,4 +1,4 @@
- # data_loader.py
+# data_loader.py
 """
 Handles all data loading for the application.
 Supports loading from Google Sheets, Excel, or JSON.
