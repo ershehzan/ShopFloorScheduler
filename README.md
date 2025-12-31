@@ -72,7 +72,7 @@ Open your browser and navigate to: **`http://127.0.0.1:5000`**
   * **Backend:** Python, Pandas (Data Processing), Matplotlib (Visualization)
   * **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (Polling)
   * **Web Framework:** Flask
-  * **Algorithms:** Genetic Algorithm, Heuristics (SPT, EDD, WSPT)
+  * **Algorithms:** Genetic Algorithm, Heuristics (SPT, EDD, WSPT, FCFS)
 
 -----
 
