@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-Web%20App-green)
-![Bootstrap](https://img.shields.io/badge/UI-Bootstrap%205-purple)
+![Bootstrap](https://img.shields.io/badge/UI-Bootstrap%205-purple) 
 ![License](https://img.shields.io/badge/License-MIT-orange)
 
 **PyShop Scheduler** is a full-stack optimization tool designed to solve complex Job Shop Scheduling problems. It features a powerful Python backend driven by a **Multi-Objective Genetic Algorithm (GA)** and a modern, user-friendly Web Interface.
