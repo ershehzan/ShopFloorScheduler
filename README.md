@@ -1,4 +1,4 @@
-# PyShop Scheduler : Shop Floor Scheduling Optimization 🏭 
+# PyShop Scheduler : Shop Floor Scheduling Optimization 
   
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Flask](https://img.shields.io/badge/Flask-Web%20App-green)
@@ -11,26 +11,26 @@ This tool helps factory managers optimize production by intelligently balancing 
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🧠 Intelligent Scheduling Engine
+###  Intelligent Scheduling Engine
 * **Genetic Algorithm:** A custom-built metaheuristic that evolves schedules over generations.
 * **Multi-Objective:** Optimizes for both speed and on-time delivery simultaneously.
 * **Real Constraints:** Handles complex constraints like **Machine Downtime** (maintenance) and **Setup Times**.
 
-### 💻 Modern Web Interface
+###  Modern Web Interface
 * **Interactive Dashboard:** Built with **Flask** and **Bootstrap 5**.
 * **Drag-and-Drop Upload:** Easily upload Excel schedule data.
 * **Visual Gantt Charts:** Automatically generates and displays detailed production timelines.
 * **Detailed Reports:** View row-by-row schedule data or download full Excel reports.
 
-### ⚙️ Dynamic Configuration
+###  Dynamic Configuration
 * **User Controls:** Adjust population size, generations, and fitness weights directly from the UI.
 * **Asynchronous Processing:** Features a real-time loading screen for handling long-running tasks.
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 ### 1. Clone & Install
 ```bash
@@ -67,7 +67,7 @@ Open your browser and navigate to: **`http://127.0.0.1:5000`**
 
 -----
 
-## 🛠️ Tech Stack
+## Tech Stack
 
   * **Backend:** Python, Pandas (Data Processing), Matplotlib (Visualization)
   * **Frontend:** HTML5, CSS3, Bootstrap 5, JavaScript (Polling)
