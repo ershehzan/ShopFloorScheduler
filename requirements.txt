@@ -1,0 +1,25 @@
+# requirements.txt — ShopFloorScheduler
+# Generated for Phase 1 (Architecture Refactor)
+
+# ─── Existing dependencies ───────────────────────────────────────────────────
+flask>=3.0.0                   # Legacy (kept for reference; replaced by FastAPI)
+pandas>=2.0.0
+openpyxl>=3.1.0
+gspread>=6.0.0
+matplotlib>=3.8.0
+xlsxwriter>=3.1.0
+
+# ─── TASK-01: FastAPI + ASGI server ──────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0      # ASGI server with websocket + http/2 support
+python-multipart>=0.0.9        # Required for FastAPI file upload (Form + UploadFile)
+
+# ─── TASK-03: Celery + Redis task queue ──────────────────────────────────────
+celery>=5.4.0
+redis>=5.0.0                   # Python Redis client (also used as Celery backend)
+
+# ─── TASK-04: Pydantic (FastAPI uses it internally; explicit pin for stability) ─
+pydantic>=2.7.0
+
+# ─── TASK-05: Structured logging ─────────────────────────────────────────────
+loguru>=0.7.2
