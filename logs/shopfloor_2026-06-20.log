@@ -1,0 +1,4 @@
+2026-06-20 10:18:44 | INFO     | <string>:<module>:1 | All Phase 1 imports OK. Algorithms: ['FCFS', 'SPT', 'EDD', 'WSPT']
+2026-06-20 10:20:37 | INFO     | main:on_startup:73 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-20 10:20:37 | INFO     | main:on_startup:74 | Swagger docs available at http://localhost:8000/docs
+2026-06-20 10:22:18 | INFO     | main:on_shutdown:79 | ShopFloorScheduler API shutting down.

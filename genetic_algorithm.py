@@ -1,4 +1,4 @@
- # genetic_algorithm.py
+# genetic_algorithm.py
 """
 Contains all logic for the multi-objective Genetic Algorithm (GA).
 
@@ -11,6 +11,7 @@ This module implements the core GA loop:
 """
 import random
 import copy
+from core.logger import logger
 
 def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rate, tourn_size, w_makespan, w_tardiness):
     """
@@ -30,15 +31,14 @@ def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rat
     Returns:
         list: The best schedule found by the algorithm.
     """
-    from main import schedule_fcfs # Local import to prevent circular dependency
+    from scheduler.engine import schedule_fcfs  # Import from dedicated engine module
     
     population = create_initial_population(jobs, pop_size)
     best_overall_schedule = None
     best_overall_fitness = float('inf')
 
-    print("\n--- Running Genetic Algorithm (Multi-Objective) ---")
-    print(f"Settings: Pop={pop_size}, Gen={num_gen}, M-Rate={mut_rate}")
-    print(f"Fitness Weights: Makespan={w_makespan}, Tardiness={w_tardiness}")
+    logger.info("Running Genetic Algorithm (Multi-Objective) | Pop={}, Gen={}, M-Rate={}", pop_size, num_gen, mut_rate)
+    logger.info("Fitness Weights: Makespan={}, Tardiness={}", w_makespan, w_tardiness)
     
     # Start the evolution loop
     for gen in range(num_gen):
@@ -68,7 +68,7 @@ def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rat
             best_overall_schedule = best_in_gen[2]
             best_makespan = best_in_gen[3]
             best_tardiness = best_in_gen[4]
-            print(f"Gen {gen+1}: New best! Fitness={best_overall_fitness:.2f} (Makespan={best_makespan}, Tardiness={best_tardiness})")
+            logger.debug("Gen {}: New best! Fitness={:.2f} (Makespan={}, Tardiness={})", gen + 1, best_overall_fitness, best_makespan, best_tardiness)
 
         # 2. Create the next generation
         next_generation = [best_in_gen[0]] # Elitism: Keep the best individual
@@ -90,7 +90,7 @@ def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rat
         population = next_generation
 
     final_makespan = max(op[4] for op in best_overall_schedule) if best_overall_schedule else 0
-    print(f"Genetic Algorithm finished. Best makespan: {final_makespan}")
+    logger.info("Genetic Algorithm finished. Best makespan: {}", final_makespan)
     return best_overall_schedule
 
 def calculate_tardiness(schedule: list, jobs: list) -> int:
