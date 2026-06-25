@@ -7,17 +7,24 @@ Routes:
   GET  /api/schedule/status/{id}    — Poll task status
   GET  /api/schedule/results/{id}   — Get final results (completed tasks only)
   GET  /api/schedule/download/{fn}  — Download generated Excel report
+
+NOTE: Uses in-process background threading when Redis/Celery is unavailable.
 """
 import os
 import uuid
+import threading
+from typing import Optional
 
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
-from celery.result import AsyncResult
+from fastapi import APIRouter, BackgroundTasks, File, Form, UploadFile, HTTPException
+from fastapi.responses import FileResponse
 
-from celery_app import celery_app
-from scheduler.tasks import run_schedule_task
-from api.schemas import UploadResponse, ScheduleStatusResponse, ScheduleResultData, ScheduledOperationSchema, UtilizationSchema
+from api.schemas import (
+    UploadResponse,
+    ScheduleStatusResponse,
+    ScheduleResultData,
+    ScheduledOperationSchema,
+    UtilizationSchema,
+)
 from core.logger import logger
 
 router = APIRouter(prefix="/api/schedule", tags=["Scheduling"])
@@ -26,6 +33,139 @@ UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "output"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# In-memory job store (replaces Celery when Redis is unavailable)
+# ---------------------------------------------------------------------------
+_JOBS: dict[str, dict] = {}
+_JOBS_LOCK = threading.Lock()
+
+
+def _set_job(task_id: str, state: str, message: str = "", result: Optional[dict] = None):
+    with _JOBS_LOCK:
+        _JOBS[task_id] = {"state": state, "message": message, "result": result}
+
+
+def _get_job(task_id: str) -> Optional[dict]:
+    with _JOBS_LOCK:
+        return _JOBS.get(task_id)
+
+
+# ---------------------------------------------------------------------------
+# Background worker
+# ---------------------------------------------------------------------------
+
+def _run_schedule_background(
+    task_id: str,
+    filepath: str,
+    setup_time: int,
+    algorithm: str,
+    pop_size: int,
+    generations: int,
+    mutation_rate: float,
+    tournament_size: int,
+    w_makespan: float,
+    w_tardiness: float,
+):
+    """Run the full scheduling pipeline in a background thread."""
+    _set_job(task_id, "processing", "Loading data...")
+    try:
+        from data_loader import load_data_from_excel
+        from scheduler.engine import ALGORITHM_MAP, schedule_fcfs
+        from scheduler.metrics import build_full_metrics
+        from visualization import create_gantt_chart
+        from exporter import export_to_excel
+        from genetic_algorithm import run_genetic_algorithm
+
+        logger.info("Task {}: Loading data from {}", task_id, filepath)
+        _set_job(task_id, "processing", "Loading Excel data...")
+        jobs, machines = load_data_from_excel(filepath)
+
+        _set_job(task_id, "processing", f"Running {algorithm} algorithm...")
+        logger.info("Task {}: Running {} algorithm", task_id, algorithm)
+
+        if algorithm == "GA":
+            best_schedule, _ = run_genetic_algorithm(
+                jobs=jobs,
+                machines=machines,
+                setup_time=setup_time,
+                pop_size=pop_size,
+                generations=generations,
+                mutation_rate=mutation_rate,
+                tournament_size=tournament_size,
+                w_makespan=w_makespan,
+                w_tardiness=w_tardiness,
+            )
+        else:
+            fn = ALGORITHM_MAP.get(algorithm)
+            if fn is None:
+                raise ValueError(f"Unknown algorithm: {algorithm}")
+            best_schedule = fn(jobs, machines, setup_time)
+
+        _set_job(task_id, "processing", "Generating reports...")
+        logger.info("Task {}: Computing metrics", task_id)
+        metrics = build_full_metrics(best_schedule, jobs, machines)
+
+        # Generate Gantt chart
+        chart_filename = f"gantt_{task_id}.png"
+        chart_path = os.path.join("static", chart_filename)
+        try:
+            create_gantt_chart(best_schedule, machines, chart_path)
+            chart_url = f"/static/{chart_filename}"
+        except Exception as e:
+            logger.warning("Task {}: Gantt chart generation failed: {}", task_id, e)
+            chart_url = None
+
+        # Export Excel
+        excel_filename = f"schedule_{task_id}.xlsx"
+        excel_path = os.path.join(OUTPUT_FOLDER, excel_filename)
+        try:
+            export_to_excel(best_schedule, jobs, machines, metrics, excel_path)
+            excel_url = f"/api/schedule/download/{excel_filename}"
+        except Exception as e:
+            logger.warning("Task {}: Excel export failed: {}", task_id, e)
+            excel_url = None
+
+        # Build serializable schedule list
+        schedule_list = [
+            {
+                "job_id": op[0],
+                "op_index": op[1],
+                "machine_id": op[2],
+                "start_time": op[3],
+                "end_time": op[4],
+            }
+            for op in best_schedule
+        ]
+
+        utilization_list = [
+            {"machine_id": m_id, "utilization": util}
+            for m_id, util in metrics.get("utilization", {}).items()
+        ]
+
+        result = {
+            "makespan": metrics.get("makespan", 0),
+            "total_tardiness": metrics.get("total_tardiness", 0),
+            "avg_flow_time": metrics.get("avg_flow_time", 0.0),
+            "on_time_percent": metrics.get("on_time_percent", 0.0),
+            "algorithm": algorithm,
+            "chart_url": chart_url,
+            "excel_url": excel_url,
+            "schedule": schedule_list,
+            "utilization": utilization_list,
+        }
+
+        _set_job(task_id, "complete", "Optimization complete.", result)
+        logger.info(
+            "Task {}: Complete. Makespan={}, Tardiness={}",
+            task_id,
+            metrics.get("makespan"),
+            metrics.get("total_tardiness"),
+        )
+
+    except Exception as exc:
+        logger.error("Task {}: Failed — {}", task_id, str(exc))
+        _set_job(task_id, "error", str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -37,14 +177,10 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     response_model=UploadResponse,
     status_code=202,
     summary="Upload production data and start optimization",
-    description=(
-        "Accepts a multipart/form-data request with an Excel (.xlsx) file and "
-        "scheduling configuration parameters. Returns a task_id immediately; "
-        "use GET /api/schedule/status/{task_id} to track progress."
-    ),
 )
 async def upload_and_schedule(
-    file: UploadFile = File(..., description="Excel file with 'Jobs' and 'Machines' sheets."),
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
     setup_time: int = Form(default=2, ge=0, le=60),
     algorithm: str = Form(default="GA"),
     pop_size: int = Form(default=30, ge=5, le=500),
@@ -55,21 +191,18 @@ async def upload_and_schedule(
     w_tardiness: float = Form(default=0.4, ge=0.0, le=1.0),
 ) -> UploadResponse:
     # Validate file type
-    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported.")
 
-    # Validate algorithm choice
+    # Validate algorithm
     allowed_algorithms = {"GA", "FCFS", "SPT", "EDD", "WSPT"}
-    if algorithm.upper() not in allowed_algorithms:
-        raise HTTPException(
-            status_code=422,
-            detail=f"algorithm must be one of {allowed_algorithms}",
-        )
+    algorithm = algorithm.upper()
+    if algorithm not in allowed_algorithms:
+        raise HTTPException(status_code=422, detail=f"algorithm must be one of {allowed_algorithms}")
 
-    # Save uploaded file with unique name
+    # Save uploaded file
     task_id = str(uuid.uuid4())
     filepath = os.path.join(UPLOAD_FOLDER, f"{task_id}.xlsx")
-
     try:
         contents = await file.read()
         with open(filepath, "wb") as f:
@@ -78,15 +211,19 @@ async def upload_and_schedule(
         logger.error("Failed to save uploaded file: {}", str(e))
         raise HTTPException(status_code=500, detail="Failed to save uploaded file.")
 
-    logger.info("File uploaded for task {}. Starting {} optimization.", task_id, algorithm.upper())
+    logger.info("File uploaded for task {}. Starting {} optimization.", task_id, algorithm)
 
-    # Enqueue Celery task
-    run_schedule_task.apply_async(
+    # Register job as pending immediately
+    _set_job(task_id, "pending", "Task queued.")
+
+    # Run in background thread (no Redis/Celery required)
+    thread = threading.Thread(
+        target=_run_schedule_background,
         kwargs={
             "task_id": task_id,
             "filepath": filepath,
             "setup_time": setup_time,
-            "algorithm": algorithm.upper(),
+            "algorithm": algorithm,
             "pop_size": pop_size,
             "generations": generations,
             "mutation_rate": mutation_rate,
@@ -94,12 +231,13 @@ async def upload_and_schedule(
             "w_makespan": w_makespan,
             "w_tardiness": w_tardiness,
         },
-        task_id=task_id,  # Use our UUID as the Celery task ID for easy lookup
+        daemon=True,
     )
+    thread.start()
 
     return UploadResponse(
         task_id=task_id,
-        message=f"{algorithm.upper()} optimization started. Poll the status URL for updates.",
+        message=f"{algorithm} optimization started.",
         status_url=f"/api/schedule/status/{task_id}",
     )
 
@@ -112,40 +250,18 @@ async def upload_and_schedule(
     "/status/{task_id}",
     response_model=ScheduleStatusResponse,
     summary="Poll task status",
-    description="Returns the current state of an optimization task. Poll every 2–3 seconds until state is 'complete' or 'error'.",
 )
 async def get_status(task_id: str) -> ScheduleStatusResponse:
-    result: AsyncResult = celery_app.AsyncResult(task_id)
-    state = result.state
+    job = _get_job(task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
 
-    logger.debug("Status check for task {}: {}", task_id, state)
-
-    if state == "PENDING":
-        return ScheduleStatusResponse(task_id=task_id, state="pending", message="Task is queued.")
-
-    if state == "PROGRESS":
-        meta = result.info or {}
-        return ScheduleStatusResponse(
-            task_id=task_id,
-            state="processing",
-            message=meta.get("message", "Processing..."),
-        )
-
-    if state == "SUCCESS":
-        data = result.result or {}
-        return ScheduleStatusResponse(
-            task_id=task_id,
-            state="complete",
-            message="Optimization complete.",
-            result=_build_result(data),
-        )
-
-    if state == "FAILURE":
-        err = str(result.info) if result.info else "Unknown error."
-        return ScheduleStatusResponse(task_id=task_id, state="error", message=err)
-
-    # REVOKED or other states
-    return ScheduleStatusResponse(task_id=task_id, state=state.lower(), message="Unexpected task state.")
+    return ScheduleStatusResponse(
+        task_id=task_id,
+        state=job["state"],
+        message=job.get("message", ""),
+        result=_build_result(job["result"]) if job.get("result") else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -154,32 +270,36 @@ async def get_status(task_id: str) -> ScheduleStatusResponse:
 
 @router.get(
     "/results/{task_id}",
-    response_model=ScheduleResultData,
+    response_model=ScheduleStatusResponse,
     summary="Get full optimization results",
-    description="Returns the complete result payload for a finished task. Returns 404 if the task is still running.",
 )
-async def get_results(task_id: str) -> ScheduleResultData:
-    result: AsyncResult = celery_app.AsyncResult(task_id)
+async def get_results(task_id: str) -> ScheduleStatusResponse:
+    job = _get_job(task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
 
-    if result.state != "SUCCESS":
-        raise HTTPException(
-            status_code=404,
-            detail=f"Results not available. Task state: {result.state}",
+    if job["state"] == "complete" and job.get("result"):
+        return ScheduleStatusResponse(
+            task_id=task_id,
+            state="complete",
+            message="Optimization complete.",
+            result=_build_result(job["result"]),
         )
 
-    data = result.result or {}
-    return _build_result(data)
+    if job["state"] == "error":
+        return ScheduleStatusResponse(task_id=task_id, state="error", message=job.get("message", ""))
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"Results not available yet. Task state: {job['state']}",
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /api/schedule/download/{filename}
 # ---------------------------------------------------------------------------
 
-@router.get(
-    "/download/{filename}",
-    summary="Download generated Excel report",
-    description="Streams the Excel schedule export as a file download.",
-)
+@router.get("/download/{filename}", summary="Download generated Excel report")
 async def download_file(filename: str) -> FileResponse:
     path = os.path.join(OUTPUT_FOLDER, filename)
     if not os.path.exists(path):
@@ -196,7 +316,6 @@ async def download_file(filename: str) -> FileResponse:
 # ---------------------------------------------------------------------------
 
 def _build_result(data: dict) -> ScheduleResultData:
-    """Convert the raw Celery result dict into a typed ScheduleResultData."""
     return ScheduleResultData(
         makespan=data.get("makespan", 0),
         total_tardiness=data.get("total_tardiness", 0),

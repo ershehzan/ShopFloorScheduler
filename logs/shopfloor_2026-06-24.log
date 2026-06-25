@@ -1,0 +1,5 @@
+2026-06-24 16:23:54 | INFO     | main:on_startup:73 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-24 16:23:54 | INFO     | main:on_startup:74 | Swagger docs available at http://localhost:8000/docs
+2026-06-24 16:26:22 | INFO     | main:on_shutdown:79 | ShopFloorScheduler API shutting down.
+2026-06-24 16:26:23 | INFO     | main:on_startup:73 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-24 16:26:23 | INFO     | main:on_startup:74 | Swagger docs available at http://localhost:8000/docs
