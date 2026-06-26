@@ -8,7 +8,8 @@ Routes:
   GET  /api/schedule/results/{id}   — Get final results (completed tasks only)
   GET  /api/schedule/download/{fn}  — Download generated Excel report
 
-NOTE: Uses in-process background threading when Redis/Celery is unavailable.
+NOTE: Uses in-process background threading (no Redis/Celery required).
+      Results are persisted to SQLite via SQLAlchemy.
 """
 import os
 import uuid
@@ -35,7 +36,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# In-memory job store (replaces Celery when Redis is unavailable)
+# In-memory job store (for real-time status polling)
+# Results are also persisted to SQLite on completion (TASK-14)
 # ---------------------------------------------------------------------------
 _JOBS: dict[str, dict] = {}
 _JOBS_LOCK = threading.Lock()
@@ -52,12 +54,13 @@ def _get_job(task_id: str) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Background worker
+# Background worker — runs scheduling + persists to DB
 # ---------------------------------------------------------------------------
 
 def _run_schedule_background(
     task_id: str,
     filepath: str,
+    original_filename: str,
     setup_time: int,
     algorithm: str,
     pop_size: int,
@@ -67,15 +70,17 @@ def _run_schedule_background(
     w_makespan: float,
     w_tardiness: float,
 ):
-    """Run the full scheduling pipeline in a background thread."""
+    """Run the full scheduling pipeline in a background thread and persist to DB."""
     _set_job(task_id, "processing", "Loading data...")
     try:
         from data_loader import load_data_from_excel
-        from scheduler.engine import ALGORITHM_MAP, schedule_fcfs
+        from scheduler.engine import ALGORITHM_MAP
         from scheduler.metrics import build_full_metrics
         from visualization import create_gantt_chart
         from exporter import export_to_excel
         from genetic_algorithm import run_genetic_algorithm
+        from core.database import SessionLocal
+        from core.models_db import ScheduleRun, JobRecord, OperationRecord
 
         logger.info("Task {}: Loading data from {}", task_id, filepath)
         _set_job(task_id, "processing", "Loading Excel data...")
@@ -155,6 +160,54 @@ def _run_schedule_background(
             "utilization": utilization_list,
         }
 
+        # ── TASK-14: Persist to SQLite ────────────────────────────────────────
+        try:
+            db = SessionLocal()
+            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+            if run_row:
+                run_row.status = "complete"
+                run_row.algorithm = algorithm
+                run_row.makespan = result["makespan"]
+                run_row.total_tardiness = result["total_tardiness"]
+                run_row.avg_flow_time = result["avg_flow_time"]
+                run_row.on_time_percent = result["on_time_percent"]
+
+                # Persist operations
+                for op in schedule_list:
+                    db.add(OperationRecord(
+                        run_id=run_row.id,
+                        job_id=op["job_id"],
+                        op_index=op["op_index"],
+                        machine_id=op["machine_id"],
+                        start_time=op["start_time"],
+                        end_time=op["end_time"],
+                    ))
+
+                # Persist job-level summaries (completion time = max end time per job)
+                job_completion: dict[str, float] = {}
+                for op in schedule_list:
+                    jid = op["job_id"]
+                    job_completion[jid] = max(job_completion.get(jid, 0.0), op["end_time"])
+
+                for job in jobs:
+                    jid = str(job.job_id)
+                    due = getattr(job, "due_date", None)
+                    ct = job_completion.get(jid, 0.0)
+                    tard = max(0.0, ct - (due or ct))
+                    db.add(JobRecord(
+                        run_id=run_row.id,
+                        job_id=jid,
+                        due_date=due,
+                        completion_time=ct,
+                        tardiness=tard,
+                    ))
+
+                db.commit()
+                logger.info("Task {}: Persisted to database (run_id={})", task_id, run_row.id)
+            db.close()
+        except Exception as db_err:
+            logger.error("Task {}: DB persistence failed — {}", task_id, str(db_err))
+
         _set_job(task_id, "complete", "Optimization complete.", result)
         logger.info(
             "Task {}: Complete. Makespan={}, Tardiness={}",
@@ -166,6 +219,19 @@ def _run_schedule_background(
     except Exception as exc:
         logger.error("Task {}: Failed — {}", task_id, str(exc))
         _set_job(task_id, "error", str(exc))
+        # Mark as error in DB
+        try:
+            from core.database import SessionLocal
+            from core.models_db import ScheduleRun
+            db = SessionLocal()
+            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+            if run_row:
+                run_row.status = "error"
+                run_row.error_message = str(exc)
+                db.commit()
+            db.close()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +268,7 @@ async def upload_and_schedule(
 
     # Save uploaded file
     task_id = str(uuid.uuid4())
+    original_filename = file.filename
     filepath = os.path.join(UPLOAD_FOLDER, f"{task_id}.xlsx")
     try:
         contents = await file.read()
@@ -213,7 +280,23 @@ async def upload_and_schedule(
 
     logger.info("File uploaded for task {}. Starting {} optimization.", task_id, algorithm)
 
-    # Register job as pending immediately
+    # ── TASK-14: Create initial DB row ──────────────────────────────────────
+    try:
+        from core.database import SessionLocal
+        from core.models_db import ScheduleRun
+        db = SessionLocal()
+        db.add(ScheduleRun(
+            task_id=task_id,
+            status="pending",
+            algorithm=algorithm,
+            file_name=original_filename,
+        ))
+        db.commit()
+        db.close()
+    except Exception as db_err:
+        logger.warning("Task {}: Could not create DB row — {}", task_id, str(db_err))
+
+    # Register job as pending in memory
     _set_job(task_id, "pending", "Task queued.")
 
     # Run in background thread (no Redis/Celery required)
@@ -222,6 +305,7 @@ async def upload_and_schedule(
         kwargs={
             "task_id": task_id,
             "filepath": filepath,
+            "original_filename": original_filename,
             "setup_time": setup_time,
             "algorithm": algorithm,
             "pop_size": pop_size,
@@ -254,6 +338,21 @@ async def upload_and_schedule(
 async def get_status(task_id: str) -> ScheduleStatusResponse:
     job = _get_job(task_id)
     if job is None:
+        # Fallback: try DB (covers server restarts)
+        try:
+            from core.database import SessionLocal
+            from core.models_db import ScheduleRun
+            db = SessionLocal()
+            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+            db.close()
+            if run_row:
+                return ScheduleStatusResponse(
+                    task_id=task_id,
+                    state=run_row.status,
+                    message=run_row.error_message or "",
+                )
+        except Exception:
+            pass
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
 
     return ScheduleStatusResponse(

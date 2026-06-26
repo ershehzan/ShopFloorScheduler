@@ -268,3 +268,79 @@ h5 { font-size: 1.125rem; font-weight: 500; }
 .kpi-card-cyan   { border-top: 3px solid var(--accent); }
 .kpi-card-green  { border-top: 3px solid var(--success); }
 .kpi-card-amber  { border-top: 3px solid var(--warning); }
+
+/* ─── Additional utilities ──────────────────────────────────── */
+
+/* Semantic color aliases */
+.text-primary-text   { color: var(--text-primary); }
+.text-secondary-text { color: var(--text-secondary); }
+.text-muted          { color: var(--text-muted); }
+.bg-surface-2        { background-color: var(--surface-2); }
+.border-border       { border-color: var(--border); }
+
+/* btn-sm variant */
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
+/* form-input — unified input + select styling */
+.form-input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.form-input:focus {
+  border-color: var(--secondary);
+  box-shadow: var(--shadow-glow);
+}
+.form-input::placeholder { color: var(--text-muted); }
+
+/* select arrow */
+select.form-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+/* Alert / notification banners */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+}
+.alert-error {
+  background: #FEF2F2;
+  color: #991B1B;
+  border-color: #FCA5A5;
+}
+.alert-warning {
+  background: #FFFBEB;
+  color: #92400E;
+  border-color: #FDE68A;
+}
+.alert-success {
+  background: #F0FDF4;
+  color: #166534;
+  border-color: #86EFAC;
+}
+.dark .alert-error   { background: rgba(239,68,68,0.1); color: #FCA5A5; border-color: rgba(239,68,68,0.3); }
+.dark .alert-warning { background: rgba(245,158,11,0.1); color: #FCD34D; border-color: rgba(245,158,11,0.3); }
+.dark .alert-success { background: rgba(16,185,129,0.1); color: #34D399; border-color: rgba(16,185,129,0.3); }
+

@@ -23,3 +23,10 @@ pydantic>=2.7.0
 
 # ─── TASK-05: Structured logging ─────────────────────────────────────────────
 loguru>=0.7.2
+
+# ─── TASK-13: Database (SQLAlchemy ORM + SQLite/PostgreSQL) ──────────────────
+sqlalchemy>=2.0.0        # ORM + connection pooling
+alembic>=1.13.0          # Schema migrations
+aiosqlite>=0.20.0        # Async SQLite driver (needed for SQLAlchemy async mode)
+# psycopg2-binary>=2.9.0  # Uncomment for PostgreSQL in production
+
