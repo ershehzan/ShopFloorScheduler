@@ -13,11 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Factory,
+  History,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/schedule/new", label: "New Schedule", icon: CalendarClock },
+  { href: "/history", label: "History", icon: History },
   { href: "/optimize", label: "Optimization", icon: Zap },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },

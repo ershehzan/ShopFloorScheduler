@@ -52,6 +52,26 @@ export interface HealthResponse {
   version: string;
 }
 
+export interface ScheduleRunSummary {
+  task_id: string;
+  created_at: string;
+  status: "pending" | "processing" | "complete" | "error";
+  algorithm: string | null;
+  file_name: string | null;
+  makespan: number | null;
+  total_tardiness: number | null;
+  avg_flow_time: number | null;
+  on_time_percent: number | null;
+}
+
+export interface HistoryResponse {
+  items: ScheduleRunSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(
@@ -119,4 +139,20 @@ export function resourceUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (path.startsWith("http")) return path;
   return `${BASE_URL}${path}`;
+}
+
+/** GET /api/history — paginated schedule run history */
+export async function getHistory(params: {
+  page?: number;
+  page_size?: number;
+  algorithm?: string;
+  status?: string;
+} = {}): Promise<HistoryResponse> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.page_size) query.set("page_size", String(params.page_size));
+  if (params.algorithm) query.set("algorithm", params.algorithm);
+  if (params.status) query.set("status", params.status);
+  const qs = query.toString();
+  return apiFetch<HistoryResponse>(`/api/history${qs ? "?" + qs : ""}`);
 }

@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routers import health, schedule
+from api.routers import health, schedule, history
 from core.logger import logger
 
 # ---------------------------------------------------------------------------
@@ -63,6 +63,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(health.router)
 app.include_router(schedule.router)
+app.include_router(history.router)
 
 # ---------------------------------------------------------------------------
 # Startup / Shutdown events
@@ -70,6 +71,8 @@ app.include_router(schedule.router)
 
 @app.on_event("startup")
 async def on_startup():
+    from core.database import init_db
+    init_db()  # Create SQLite tables if they don't exist (TASK-13)
     logger.info("ShopFloorScheduler API starting up (v1.0.0).")
     logger.info("Swagger docs available at http://localhost:8000/docs")
 
