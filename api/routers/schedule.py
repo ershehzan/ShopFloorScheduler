@@ -90,14 +90,14 @@ def _run_schedule_background(
         logger.info("Task {}: Running {} algorithm", task_id, algorithm)
 
         if algorithm == "GA":
-            best_schedule, _ = run_genetic_algorithm(
+            best_schedule = run_genetic_algorithm(
                 jobs=jobs,
                 machines=machines,
                 setup_time=setup_time,
                 pop_size=pop_size,
-                generations=generations,
-                mutation_rate=mutation_rate,
-                tournament_size=tournament_size,
+                num_gen=generations,
+                mut_rate=mutation_rate,
+                tourn_size=tournament_size,
                 w_makespan=w_makespan,
                 w_tardiness=w_tardiness,
             )
@@ -115,7 +115,7 @@ def _run_schedule_background(
         chart_filename = f"gantt_{task_id}.png"
         chart_path = os.path.join("static", chart_filename)
         try:
-            create_gantt_chart(best_schedule, machines, chart_path)
+            create_gantt_chart(best_schedule, f"{algorithm} Schedule", chart_path)
             chart_url = f"/static/{chart_filename}"
         except Exception as e:
             logger.warning("Task {}: Gantt chart generation failed: {}", task_id, e)
@@ -125,7 +125,7 @@ def _run_schedule_background(
         excel_filename = f"schedule_{task_id}.xlsx"
         excel_path = os.path.join(OUTPUT_FOLDER, excel_filename)
         try:
-            export_to_excel(best_schedule, jobs, machines, metrics, excel_path)
+            export_to_excel(best_schedule, jobs, excel_path)
             excel_url = f"/api/schedule/download/{excel_filename}"
         except Exception as e:
             logger.warning("Task {}: Excel export failed: {}", task_id, e)
