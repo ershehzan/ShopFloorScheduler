@@ -127,5 +127,5 @@ if __name__ == "__main__":
     output_filename = os.path.join(OUTPUT_FOLDER, 'GA_schedule.xlsx')
     export_to_excel(ga_schedule, jobs_data, output_filename)
 
-    print(f"\n✅ All schedules have been exported to the '{OUTPUT_FOLDER}' folder.")
+    logger.info("All schedules have been exported to the '{}' folder.", OUTPUT_FOLDER)
     logger.info("All schedules exported to '{}' folder.", OUTPUT_FOLDER)

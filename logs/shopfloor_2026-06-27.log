@@ -1,0 +1,86 @@
+2026-06-27 10:31:09 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-27 10:31:09 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-27 10:32:09 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 6f81adc2-f3e7-4e83-95b1-174094c07666. Starting GA optimization.
+2026-06-27 10:32:11 | INFO     | schedule:_run_schedule_background:85 | Task 6f81adc2-f3e7-4e83-95b1-174094c07666: Loading data from uploads\6f81adc2-f3e7-4e83-95b1-174094c07666.xlsx
+2026-06-27 10:32:11 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\6f81adc2-f3e7-4e83-95b1-174094c07666.xlsx
+2026-06-27 10:32:11 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:32:11 | INFO     | schedule:_run_schedule_background:90 | Task 6f81adc2-f3e7-4e83-95b1-174094c07666: Running GA algorithm
+2026-06-27 10:32:11 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=10, M-Rate=0.1
+2026-06-27 10:32:11 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-27 10:32:11 | ERROR    | schedule:_run_schedule_background:220 | Task 6f81adc2-f3e7-4e83-95b1-174094c07666: Failed — 'Job' object has no attribute 'machine_id'
+2026-06-27 10:32:11 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task e8552c99-cc93-450a-8456-7bd8276aefdc. Starting FCFS optimization.
+2026-06-27 10:32:11 | INFO     | schedule:_run_schedule_background:85 | Task e8552c99-cc93-450a-8456-7bd8276aefdc: Loading data from uploads\e8552c99-cc93-450a-8456-7bd8276aefdc.xlsx
+2026-06-27 10:32:11 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\e8552c99-cc93-450a-8456-7bd8276aefdc.xlsx
+2026-06-27 10:32:11 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:32:11 | INFO     | schedule:_run_schedule_background:90 | Task e8552c99-cc93-450a-8456-7bd8276aefdc: Running FCFS algorithm
+2026-06-27 10:32:11 | ERROR    | schedule:_run_schedule_background:220 | Task e8552c99-cc93-450a-8456-7bd8276aefdc: Failed — 'Job' object has no attribute 'machine_id'
+2026-06-27 10:32:12 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task f68966af-7014-4e85-844e-255d95d551ef. Starting SPT optimization.
+2026-06-27 10:32:12 | INFO     | schedule:_run_schedule_background:85 | Task f68966af-7014-4e85-844e-255d95d551ef: Loading data from uploads\f68966af-7014-4e85-844e-255d95d551ef.xlsx
+2026-06-27 10:32:12 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\f68966af-7014-4e85-844e-255d95d551ef.xlsx
+2026-06-27 10:32:12 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:32:12 | INFO     | schedule:_run_schedule_background:90 | Task f68966af-7014-4e85-844e-255d95d551ef: Running SPT algorithm
+2026-06-27 10:32:12 | ERROR    | schedule:_run_schedule_background:220 | Task f68966af-7014-4e85-844e-255d95d551ef: Failed — 'Machine' object has no attribute 'operations'
+2026-06-27 10:32:13 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 96161eeb-a17d-47d6-8684-17685d6ec769. Starting EDD optimization.
+2026-06-27 10:32:13 | INFO     | schedule:_run_schedule_background:85 | Task 96161eeb-a17d-47d6-8684-17685d6ec769: Loading data from uploads\96161eeb-a17d-47d6-8684-17685d6ec769.xlsx
+2026-06-27 10:32:13 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\96161eeb-a17d-47d6-8684-17685d6ec769.xlsx
+2026-06-27 10:32:13 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:32:13 | INFO     | schedule:_run_schedule_background:90 | Task 96161eeb-a17d-47d6-8684-17685d6ec769: Running EDD algorithm
+2026-06-27 10:32:13 | ERROR    | schedule:_run_schedule_background:220 | Task 96161eeb-a17d-47d6-8684-17685d6ec769: Failed — 'Machine' object has no attribute 'due_date'
+2026-06-27 10:32:14 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task d6b2db8f-722d-46d2-bee2-c5ce052b0079. Starting WSPT optimization.
+2026-06-27 10:32:14 | INFO     | schedule:_run_schedule_background:85 | Task d6b2db8f-722d-46d2-bee2-c5ce052b0079: Loading data from uploads\d6b2db8f-722d-46d2-bee2-c5ce052b0079.xlsx
+2026-06-27 10:32:14 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\d6b2db8f-722d-46d2-bee2-c5ce052b0079.xlsx
+2026-06-27 10:32:14 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:32:14 | INFO     | schedule:_run_schedule_background:90 | Task d6b2db8f-722d-46d2-bee2-c5ce052b0079: Running WSPT algorithm
+2026-06-27 10:32:14 | ERROR    | schedule:_run_schedule_background:220 | Task d6b2db8f-722d-46d2-bee2-c5ce052b0079: Failed — 'Machine' object has no attribute 'operations'
+2026-06-27 10:32:15 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=7
+2026-06-27 10:33:11 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-27 10:33:11 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-27 10:33:22 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 51f2082d-e181-4e01-83eb-34492a33cccb. Starting GA optimization.
+2026-06-27 10:33:23 | INFO     | schedule:_run_schedule_background:85 | Task 51f2082d-e181-4e01-83eb-34492a33cccb: Loading data from uploads\51f2082d-e181-4e01-83eb-34492a33cccb.xlsx
+2026-06-27 10:33:23 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\51f2082d-e181-4e01-83eb-34492a33cccb.xlsx
+2026-06-27 10:33:23 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:33:23 | INFO     | schedule:_run_schedule_background:90 | Task 51f2082d-e181-4e01-83eb-34492a33cccb: Running GA algorithm
+2026-06-27 10:33:23 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=10, M-Rate=0.1
+2026-06-27 10:33:23 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-27 10:33:23 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 207
+2026-06-27 10:33:23 | INFO     | schedule:_run_schedule_background:111 | Task 51f2082d-e181-4e01-83eb-34492a33cccb: Computing metrics
+2026-06-27 10:33:24 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_51f2082d-e181-4e01-83eb-34492a33cccb.png
+2026-06-27 10:33:24 | INFO     | schedule:_run_schedule_background:206 | Task 51f2082d-e181-4e01-83eb-34492a33cccb: Persisted to database (run_id=8)
+2026-06-27 10:33:24 | INFO     | schedule:_run_schedule_background:212 | Task 51f2082d-e181-4e01-83eb-34492a33cccb: Complete. Makespan=207, Tardiness=1025
+2026-06-27 10:33:25 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22. Starting FCFS optimization.
+2026-06-27 10:33:25 | INFO     | schedule:_run_schedule_background:85 | Task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22: Loading data from uploads\fa7bd896-dfa4-4d9d-b638-263f1bb5ee22.xlsx
+2026-06-27 10:33:25 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\fa7bd896-dfa4-4d9d-b638-263f1bb5ee22.xlsx
+2026-06-27 10:33:25 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:33:25 | INFO     | schedule:_run_schedule_background:90 | Task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22: Running FCFS algorithm
+2026-06-27 10:33:25 | INFO     | schedule:_run_schedule_background:111 | Task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22: Computing metrics
+2026-06-27 10:33:25 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_fa7bd896-dfa4-4d9d-b638-263f1bb5ee22.png
+2026-06-27 10:33:25 | INFO     | schedule:_run_schedule_background:206 | Task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22: Persisted to database (run_id=9)
+2026-06-27 10:33:25 | INFO     | schedule:_run_schedule_background:212 | Task fa7bd896-dfa4-4d9d-b638-263f1bb5ee22: Complete. Makespan=238, Tardiness=1838
+2026-06-27 10:33:26 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task ae7ae49e-2761-4831-bceb-696f7dd93163. Starting SPT optimization.
+2026-06-27 10:33:26 | INFO     | schedule:_run_schedule_background:85 | Task ae7ae49e-2761-4831-bceb-696f7dd93163: Loading data from uploads\ae7ae49e-2761-4831-bceb-696f7dd93163.xlsx
+2026-06-27 10:33:26 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\ae7ae49e-2761-4831-bceb-696f7dd93163.xlsx
+2026-06-27 10:33:26 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:33:26 | INFO     | schedule:_run_schedule_background:90 | Task ae7ae49e-2761-4831-bceb-696f7dd93163: Running SPT algorithm
+2026-06-27 10:33:26 | INFO     | schedule:_run_schedule_background:111 | Task ae7ae49e-2761-4831-bceb-696f7dd93163: Computing metrics
+2026-06-27 10:33:26 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_ae7ae49e-2761-4831-bceb-696f7dd93163.png
+2026-06-27 10:33:26 | INFO     | schedule:_run_schedule_background:206 | Task ae7ae49e-2761-4831-bceb-696f7dd93163: Persisted to database (run_id=10)
+2026-06-27 10:33:26 | INFO     | schedule:_run_schedule_background:212 | Task ae7ae49e-2761-4831-bceb-696f7dd93163: Complete. Makespan=270, Tardiness=1161
+2026-06-27 10:33:27 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 2673afa8-b83f-4b91-be03-502d574906bb. Starting EDD optimization.
+2026-06-27 10:33:27 | INFO     | schedule:_run_schedule_background:85 | Task 2673afa8-b83f-4b91-be03-502d574906bb: Loading data from uploads\2673afa8-b83f-4b91-be03-502d574906bb.xlsx
+2026-06-27 10:33:27 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\2673afa8-b83f-4b91-be03-502d574906bb.xlsx
+2026-06-27 10:33:27 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:33:27 | INFO     | schedule:_run_schedule_background:90 | Task 2673afa8-b83f-4b91-be03-502d574906bb: Running EDD algorithm
+2026-06-27 10:33:27 | INFO     | schedule:_run_schedule_background:111 | Task 2673afa8-b83f-4b91-be03-502d574906bb: Computing metrics
+2026-06-27 10:33:28 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_2673afa8-b83f-4b91-be03-502d574906bb.png
+2026-06-27 10:33:28 | INFO     | schedule:_run_schedule_background:206 | Task 2673afa8-b83f-4b91-be03-502d574906bb: Persisted to database (run_id=11)
+2026-06-27 10:33:28 | INFO     | schedule:_run_schedule_background:212 | Task 2673afa8-b83f-4b91-be03-502d574906bb: Complete. Makespan=286, Tardiness=1367
+2026-06-27 10:33:28 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 39da6b6a-8dc3-4622-8a02-682f50dffc69. Starting WSPT optimization.
+2026-06-27 10:33:28 | INFO     | schedule:_run_schedule_background:85 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Loading data from uploads\39da6b6a-8dc3-4622-8a02-682f50dffc69.xlsx
+2026-06-27 10:33:28 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\39da6b6a-8dc3-4622-8a02-682f50dffc69.xlsx
+2026-06-27 10:33:28 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:33:28 | INFO     | schedule:_run_schedule_background:90 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Running WSPT algorithm
+2026-06-27 10:33:28 | INFO     | schedule:_run_schedule_background:111 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Computing metrics
+2026-06-27 10:33:29 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_39da6b6a-8dc3-4622-8a02-682f50dffc69.png
+2026-06-27 10:33:29 | INFO     | schedule:_run_schedule_background:206 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Persisted to database (run_id=12)
+2026-06-27 10:33:29 | INFO     | schedule:_run_schedule_background:212 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Complete. Makespan=241, Tardiness=1223
+2026-06-27 10:33:29 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12

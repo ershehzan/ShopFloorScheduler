@@ -84,7 +84,7 @@ def _run_schedule_background(
 
         logger.info("Task {}: Loading data from {}", task_id, filepath)
         _set_job(task_id, "processing", "Loading Excel data...")
-        jobs, machines = load_data_from_excel(filepath)
+        machines, jobs = load_data_from_excel(filepath)
 
         _set_job(task_id, "processing", f"Running {algorithm} algorithm...")
         logger.info("Task {}: Running {} algorithm", task_id, algorithm)
