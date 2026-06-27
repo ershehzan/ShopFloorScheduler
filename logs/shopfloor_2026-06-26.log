@@ -1,0 +1,17 @@
+2026-06-26 09:36:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-26 09:36:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-26 09:36:47 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d. Starting GA optimization.
+2026-06-26 09:36:49 | INFO     | schedule:_run_schedule_background:85 | Task 3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d: Loading data from uploads\3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d.xlsx
+2026-06-26 09:36:49 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d.xlsx
+2026-06-26 09:36:49 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-26 09:36:49 | INFO     | schedule:_run_schedule_background:90 | Task 3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d: Running GA algorithm
+2026-06-26 09:36:49 | ERROR    | schedule:_run_schedule_background:220 | Task 3d8f42d6-adc8-4c16-82fc-56bb3ff1fa7d: Failed — run_genetic_algorithm() got an unexpected keyword argument 'generations'
+2026-06-26 09:37:15 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task f3230934-9afd-4ebd-b52e-e14964679b24. Starting GA optimization.
+2026-06-26 09:37:15 | INFO     | schedule:_run_schedule_background:85 | Task f3230934-9afd-4ebd-b52e-e14964679b24: Loading data from uploads\f3230934-9afd-4ebd-b52e-e14964679b24.xlsx
+2026-06-26 09:37:15 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\f3230934-9afd-4ebd-b52e-e14964679b24.xlsx
+2026-06-26 09:37:15 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-26 09:37:15 | INFO     | schedule:_run_schedule_background:90 | Task f3230934-9afd-4ebd-b52e-e14964679b24: Running GA algorithm
+2026-06-26 09:37:15 | ERROR    | schedule:_run_schedule_background:220 | Task f3230934-9afd-4ebd-b52e-e14964679b24: Failed — run_genetic_algorithm() got an unexpected keyword argument 'generations'
+2026-06-26 09:37:53 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=2
+2026-06-26 09:37:53 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=2
+2026-06-26 09:38:26 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
