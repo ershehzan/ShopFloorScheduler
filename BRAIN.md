@@ -356,14 +356,13 @@ The GA is defined in [genetic_algorithm.py](file:///c:/ShopFloorScheduler/geneti
 
 # Known Technical Debt
 
-### 1. Signature Mismatch Bugs in FastAPI Endpoint (CRITICAL)
-In `api/routers/schedule.py`, there are two code defects that prevent successful runs:
-*   **GA Unpacking Error:**
-    *   *Code:* `best_schedule, _ = run_genetic_algorithm(...)` (Line 93)
-    *   *Defect:* `run_genetic_algorithm()` only returns a single value `best_overall_schedule`. This unpacking attempt raises a `ValueError`.
-*   **Excel Exporter Parameter Mismatch:**
-    *   *Code:* `export_to_excel(best_schedule, jobs, machines, metrics, excel_path)` (Line 128)
-    *   *Defect:* `export_to_excel()` (defined in `exporter.py`) only accepts three parameters (`schedule`, `jobs`, `file_path`). This mismatch raises a `TypeError`.
+### 1. ~~Signature Mismatch Bugs in FastAPI Endpoint~~ (RESOLVED)
+The original bugs documented here (GA unpacking error and Excel exporter parameter mismatch) were fixed in a prior refactor. However, a new critical bug — **swapped return value unpacking** — was introduced during the refactor and has now been resolved:
+*   **Swapped Tuple Unpacking (FIXED):**
+    *   *Code:* `jobs, machines = load_data_from_excel(filepath)` (Line 87)
+    *   *Defect:* `load_data_from_excel()` returns `(machines, jobs)` but the schedule router unpacked them in reverse order, causing all scheduling algorithms to crash with `AttributeError`.
+    *   *Fix:* Corrected to `machines, jobs = load_data_from_excel(filepath)`.
+
 
 ### 2. Bypassed Task Queue Infrastructure
 *   Although `celery_app.py` and `scheduler/tasks.py` are configured for Redis, the endpoints in `api/routers/schedule.py` bypass Celery. Instead, they spawn in-process background threads (`threading.Thread`).
@@ -410,7 +409,7 @@ The roadmap has been planned in distinct implementation phases:
 *   [x] **TASK-15:** Paginated run history endpoint.
 
 ### Phase 2: Production Readiness (Pending/Planned)
-*   [ ] **Fix critical API bugs:** Address the unpacking and parameter signature issues in `api/routers/schedule.py`.
+*   [x] **Fix critical API bugs:** Resolved swapped return-value unpacking in `api/routers/schedule.py` (was `jobs, machines = ...`, corrected to `machines, jobs = ...`).
 *   [ ] **Celery Integration:** Route tasks through the Celery worker queue instead of in-process threads.
 *   [ ] **Database Polling:** Transition status polling from the in-memory `_JOBS` dictionary to database queries.
 *   [ ] **Testing Suite:** Add Pytest coverage for engine computations and API routing.

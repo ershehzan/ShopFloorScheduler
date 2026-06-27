@@ -5,6 +5,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
+from core.logger import logger
 
 def create_gantt_chart(schedule, title="Shop Floor Schedule", save_path=None):
     """
@@ -22,9 +23,9 @@ def create_gantt_chart(schedule, title="Shop Floor Schedule", save_path=None):
     
     num_jobs = len(job_ids)
     if num_jobs <= 20:
-        colors = plt.cm.get_cmap('tab20', num_jobs)
+        colors = matplotlib.colormaps['tab20'].resampled(num_jobs)
     else:
-        colors = [plt.cm.hsv(i / num_jobs) for i in range(num_jobs)]
+        colors = [matplotlib.colormaps['hsv'](i / num_jobs) for i in range(num_jobs)]
     
     color_map = {job_id: colors(i) if num_jobs <= 20 else colors[i] for i, job_id in enumerate(job_ids)}
     
@@ -67,6 +68,6 @@ def create_gantt_chart(schedule, title="Shop Floor Schedule", save_path=None):
     if save_path:
         plt.savefig(save_path) # Save to file
         plt.close() # Close memory
-        print(f"Chart saved to {save_path}")
+        logger.info("Chart saved to {}", save_path)
     else:
         plt.show()
