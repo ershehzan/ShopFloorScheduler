@@ -84,3 +84,34 @@
 2026-06-27 10:33:29 | INFO     | schedule:_run_schedule_background:206 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Persisted to database (run_id=12)
 2026-06-27 10:33:29 | INFO     | schedule:_run_schedule_background:212 | Task 39da6b6a-8dc3-4622-8a02-682f50dffc69: Complete. Makespan=241, Tardiness=1223
 2026-06-27 10:33:29 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12
+2026-06-27 10:42:55 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-27 10:42:55 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-27 10:43:25 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12
+2026-06-27 10:43:25 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12
+2026-06-27 10:43:26 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12
+2026-06-27 10:43:26 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=12
+2026-06-27 10:43:43 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 8a600236-6cc8-4670-8142-ebfecc76eb05. Starting GA optimization.
+2026-06-27 10:43:44 | INFO     | schedule:_run_schedule_background:85 | Task 8a600236-6cc8-4670-8142-ebfecc76eb05: Loading data from uploads\8a600236-6cc8-4670-8142-ebfecc76eb05.xlsx
+2026-06-27 10:43:44 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\8a600236-6cc8-4670-8142-ebfecc76eb05.xlsx
+2026-06-27 10:43:44 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:43:44 | INFO     | schedule:_run_schedule_background:90 | Task 8a600236-6cc8-4670-8142-ebfecc76eb05: Running GA algorithm
+2026-06-27 10:43:44 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=30, Gen=50, M-Rate=0.1
+2026-06-27 10:43:44 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-27 10:43:44 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 180
+2026-06-27 10:43:44 | INFO     | schedule:_run_schedule_background:111 | Task 8a600236-6cc8-4670-8142-ebfecc76eb05: Computing metrics
+2026-06-27 10:43:45 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_8a600236-6cc8-4670-8142-ebfecc76eb05.png
+2026-06-27 10:43:45 | INFO     | schedule:_run_schedule_background:206 | Task 8a600236-6cc8-4670-8142-ebfecc76eb05: Persisted to database (run_id=13)
+2026-06-27 10:43:45 | INFO     | schedule:_run_schedule_background:212 | Task 8a600236-6cc8-4670-8142-ebfecc76eb05: Complete. Makespan=180, Tardiness=569
+2026-06-27 10:44:36 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=13
+2026-06-27 10:44:36 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=13
+2026-06-27 10:44:38 | INFO     | history:get_history:86 | History query: page=2, page_size=10, total=13
+2026-06-27 10:44:41 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=13
+2026-06-27 10:44:58 | INFO     | schedule:upload_and_schedule:281 | File uploaded for task 8f7b1338-00de-4787-aa36-abbb27116e71. Starting WSPT optimization.
+2026-06-27 10:44:58 | INFO     | schedule:_run_schedule_background:85 | Task 8f7b1338-00de-4787-aa36-abbb27116e71: Loading data from uploads\8f7b1338-00de-4787-aa36-abbb27116e71.xlsx
+2026-06-27 10:44:58 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\8f7b1338-00de-4787-aa36-abbb27116e71.xlsx
+2026-06-27 10:44:58 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-27 10:44:58 | INFO     | schedule:_run_schedule_background:90 | Task 8f7b1338-00de-4787-aa36-abbb27116e71: Running WSPT algorithm
+2026-06-27 10:44:58 | INFO     | schedule:_run_schedule_background:111 | Task 8f7b1338-00de-4787-aa36-abbb27116e71: Computing metrics
+2026-06-27 10:44:59 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_8f7b1338-00de-4787-aa36-abbb27116e71.png
+2026-06-27 10:44:59 | INFO     | schedule:_run_schedule_background:206 | Task 8f7b1338-00de-4787-aa36-abbb27116e71: Persisted to database (run_id=14)
+2026-06-27 10:44:59 | INFO     | schedule:_run_schedule_background:212 | Task 8f7b1338-00de-4787-aa36-abbb27116e71: Complete. Makespan=301, Tardiness=1643

@@ -1,0 +1,177 @@
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e. Starting FCFS optimization.
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:00 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:00 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:00 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:01 | INFO     | schedule:_run_schedule_background:124 | Task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e: Loading data from uploads\9dbf2454-27f6-4420-abbb-5d50c7d87d2e.xlsx
+2026-06-28 09:58:01 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\9dbf2454-27f6-4420-abbb-5d50c7d87d2e.xlsx
+2026-06-28 09:58:01 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-28 09:58:01 | INFO     | schedule:_run_schedule_background:127 | Task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e: Running FCFS algorithm
+2026-06-28 09:58:01 | INFO     | schedule:_run_schedule_background:147 | Task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e: Computing metrics
+2026-06-28 09:58:01 | INFO     | visualization:create_gantt_chart:71 | Chart saved to static\gantt_9dbf2454-27f6-4420-abbb-5d50c7d87d2e.png
+2026-06-28 09:58:01 | INFO     | schedule:_run_schedule_background:245 | Task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e: Persisted to database (run_id=1)
+2026-06-28 09:58:01 | INFO     | schedule:_run_schedule_background:250 | Task 9dbf2454-27f6-4420-abbb-5d50c7d87d2e: Complete. Makespan=238, Tardiness=1838
+2026-06-28 09:58:03 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:03 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:03 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:04 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:04 | INFO     | data_loader:load_data_from_json:169 | Loading data from JSON: C:\ShopFloorScheduler\tests\..\data.json
+2026-06-28 09:58:04 | INFO     | data_loader:load_data_from_json:187 | JSON loaded: 3 machines, 5 jobs.
+2026-06-28 09:58:04 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: C:\ShopFloorScheduler\tests\..\data.xlsx
+2026-06-28 09:58:04 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-28 09:58:04 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 997880f5-ccbe-4291-abb2-b7fae8b3f088. Starting FCFS optimization.
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:37 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:37 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:37 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:38 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:58:38 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:58:38 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:58:39 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 522a4395-dd06-4b4a-8b8c-a4c54de543c4. Starting FCFS optimization.
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:41 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:41 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:41 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:43 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 09:59:43 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 09:59:43 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 09:59:44 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 423cc520-e618-44af-a2b6-59709384f8c1. Starting FCFS optimization.
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:15 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:15 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:15 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-28 10:00:15 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 9bf1867c-bf86-4390-837b-d0b757467f2f. Starting FCFS optimization.
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-28 10:00:23 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-28 10:00:23 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-28 10:00:23 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-28 10:00:23 | INFO     | data_loader:load_data_from_json:169 | Loading data from JSON: C:\ShopFloorScheduler\tests\..\data.json
+2026-06-28 10:00:23 | INFO     | data_loader:load_data_from_json:187 | JSON loaded: 3 machines, 5 jobs.
+2026-06-28 10:00:23 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: C:\ShopFloorScheduler\tests\..\data.xlsx
+2026-06-28 10:00:24 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-28 10:00:24 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31
+2026-06-28 10:00:24 | INFO     | schedule:_run_schedule_background:124 | Task 9bf1867c-bf86-4390-837b-d0b757467f2f: Loading data from uploads\9bf1867c-bf86-4390-837b-d0b757467f2f.xlsx
+2026-06-28 10:00:24 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: uploads\9bf1867c-bf86-4390-837b-d0b757467f2f.xlsx
+2026-06-28 10:00:24 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-28 10:00:24 | INFO     | schedule:_run_schedule_background:127 | Task 9bf1867c-bf86-4390-837b-d0b757467f2f: Running FCFS algorithm
+2026-06-28 10:00:24 | INFO     | schedule:_run_schedule_background:147 | Task 9bf1867c-bf86-4390-837b-d0b757467f2f: Computing metrics

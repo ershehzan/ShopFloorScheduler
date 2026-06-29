@@ -9,14 +9,14 @@ Routes:
   GET  /api/schedule/download/{fn}  — Download generated Excel report
 
 NOTE: Uses in-process background threading (no Redis/Celery required).
-      Results are persisted to SQLite via SQLAlchemy.
+      All state is persisted to SQLite via SQLAlchemy — no in-memory cache.
 """
+import json
 import os
 import uuid
 import threading
-from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, UploadFile, HTTPException
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 
 from api.schemas import (
@@ -35,22 +35,61 @@ OUTPUT_FOLDER = "output"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
+
 # ---------------------------------------------------------------------------
-# In-memory job store (for real-time status polling)
-# Results are also persisted to SQLite on completion (TASK-14)
+# DB helpers — read/write task state directly in SQLite
 # ---------------------------------------------------------------------------
-_JOBS: dict[str, dict] = {}
-_JOBS_LOCK = threading.Lock()
+
+def _update_run_status(task_id: str, status: str, message: str = "", **kwargs):
+    """Update a ScheduleRun row in the database."""
+    from core.database import SessionLocal
+    from core.models_db import ScheduleRun
+
+    db = SessionLocal()
+    try:
+        run = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+        if run:
+            run.status = status
+            if message:
+                run.error_message = message if status == "error" else None
+            for key, value in kwargs.items():
+                if hasattr(run, key):
+                    setattr(run, key, value)
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error("Task {}: DB status update failed — {}", task_id, str(e))
+    finally:
+        db.close()
 
 
-def _set_job(task_id: str, state: str, message: str = "", result: Optional[dict] = None):
-    with _JOBS_LOCK:
-        _JOBS[task_id] = {"state": state, "message": message, "result": result}
+def _get_run(task_id: str):
+    """Fetch a ScheduleRun row from the database. Returns None if not found."""
+    from core.database import SessionLocal
+    from core.models_db import ScheduleRun
 
-
-def _get_job(task_id: str) -> Optional[dict]:
-    with _JOBS_LOCK:
-        return _JOBS.get(task_id)
+    db = SessionLocal()
+    try:
+        run = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+        if not run:
+            return None
+        # Detach from session by reading all attrs we need
+        data = {
+            "task_id": run.task_id,
+            "status": run.status,
+            "error_message": run.error_message,
+            "algorithm": run.algorithm,
+            "makespan": run.makespan,
+            "total_tardiness": run.total_tardiness,
+            "avg_flow_time": run.avg_flow_time,
+            "on_time_percent": run.on_time_percent,
+            "chart_url": run.chart_url,
+            "excel_url": run.excel_url,
+            "result_json": run.result_json,
+        }
+        return data
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +110,7 @@ def _run_schedule_background(
     w_tardiness: float,
 ):
     """Run the full scheduling pipeline in a background thread and persist to DB."""
-    _set_job(task_id, "processing", "Loading data...")
+    _update_run_status(task_id, "processing")
     try:
         from data_loader import load_data_from_excel
         from scheduler.engine import ALGORITHM_MAP
@@ -83,10 +122,8 @@ def _run_schedule_background(
         from core.models_db import ScheduleRun, JobRecord, OperationRecord
 
         logger.info("Task {}: Loading data from {}", task_id, filepath)
-        _set_job(task_id, "processing", "Loading Excel data...")
         machines, jobs = load_data_from_excel(filepath)
 
-        _set_job(task_id, "processing", f"Running {algorithm} algorithm...")
         logger.info("Task {}: Running {} algorithm", task_id, algorithm)
 
         if algorithm == "GA":
@@ -107,7 +144,6 @@ def _run_schedule_background(
                 raise ValueError(f"Unknown algorithm: {algorithm}")
             best_schedule = fn(jobs, machines, setup_time)
 
-        _set_job(task_id, "processing", "Generating reports...")
         logger.info("Task {}: Computing metrics", task_id)
         metrics = build_full_metrics(best_schedule, jobs, machines)
 
@@ -160,7 +196,7 @@ def _run_schedule_background(
             "utilization": utilization_list,
         }
 
-        # ── TASK-14: Persist to SQLite ────────────────────────────────────────
+        # ── Persist everything to SQLite ──────────────────────────────────────
         try:
             db = SessionLocal()
             run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
@@ -171,6 +207,9 @@ def _run_schedule_background(
                 run_row.total_tardiness = result["total_tardiness"]
                 run_row.avg_flow_time = result["avg_flow_time"]
                 run_row.on_time_percent = result["on_time_percent"]
+                run_row.chart_url = chart_url
+                run_row.excel_url = excel_url
+                run_row.result_json = json.dumps(result)
 
                 # Persist operations
                 for op in schedule_list:
@@ -208,7 +247,6 @@ def _run_schedule_background(
         except Exception as db_err:
             logger.error("Task {}: DB persistence failed — {}", task_id, str(db_err))
 
-        _set_job(task_id, "complete", "Optimization complete.", result)
         logger.info(
             "Task {}: Complete. Makespan={}, Tardiness={}",
             task_id,
@@ -218,20 +256,7 @@ def _run_schedule_background(
 
     except Exception as exc:
         logger.error("Task {}: Failed — {}", task_id, str(exc))
-        _set_job(task_id, "error", str(exc))
-        # Mark as error in DB
-        try:
-            from core.database import SessionLocal
-            from core.models_db import ScheduleRun
-            db = SessionLocal()
-            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
-            if run_row:
-                run_row.status = "error"
-                run_row.error_message = str(exc)
-                db.commit()
-            db.close()
-        except Exception:
-            pass
+        _update_run_status(task_id, "error", message=str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +270,6 @@ def _run_schedule_background(
     summary="Upload production data and start optimization",
 )
 async def upload_and_schedule(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     setup_time: int = Form(default=2, ge=0, le=60),
     algorithm: str = Form(default="GA"),
@@ -280,7 +304,7 @@ async def upload_and_schedule(
 
     logger.info("File uploaded for task {}. Starting {} optimization.", task_id, algorithm)
 
-    # ── TASK-14: Create initial DB row ──────────────────────────────────────
+    # Create initial DB row (status = pending)
     try:
         from core.database import SessionLocal
         from core.models_db import ScheduleRun
@@ -295,9 +319,6 @@ async def upload_and_schedule(
         db.close()
     except Exception as db_err:
         logger.warning("Task {}: Could not create DB row — {}", task_id, str(db_err))
-
-    # Register job as pending in memory
-    _set_job(task_id, "pending", "Task queued.")
 
     # Run in background thread (no Redis/Celery required)
     thread = threading.Thread(
@@ -336,30 +357,22 @@ async def upload_and_schedule(
     summary="Poll task status",
 )
 async def get_status(task_id: str) -> ScheduleStatusResponse:
-    job = _get_job(task_id)
-    if job is None:
-        # Fallback: try DB (covers server restarts)
-        try:
-            from core.database import SessionLocal
-            from core.models_db import ScheduleRun
-            db = SessionLocal()
-            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
-            db.close()
-            if run_row:
-                return ScheduleStatusResponse(
-                    task_id=task_id,
-                    state=run_row.status,
-                    message=run_row.error_message or "",
-                )
-        except Exception:
-            pass
+    run = _get_run(task_id)
+    if run is None:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    result_data = None
+    if run["status"] == "complete" and run.get("result_json"):
+        try:
+            result_data = _build_result(json.loads(run["result_json"]))
+        except Exception:
+            logger.warning("Task {}: Could not deserialize result_json", task_id)
 
     return ScheduleStatusResponse(
         task_id=task_id,
-        state=job["state"],
-        message=job.get("message", ""),
-        result=_build_result(job["result"]) if job.get("result") else None,
+        state=run["status"],
+        message=run.get("error_message") or "",
+        result=result_data,
     )
 
 
@@ -373,24 +386,33 @@ async def get_status(task_id: str) -> ScheduleStatusResponse:
     summary="Get full optimization results",
 )
 async def get_results(task_id: str) -> ScheduleStatusResponse:
-    job = _get_job(task_id)
-    if job is None:
+    run = _get_run(task_id)
+    if run is None:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
 
-    if job["state"] == "complete" and job.get("result"):
+    if run["status"] == "complete" and run.get("result_json"):
+        try:
+            result_data = _build_result(json.loads(run["result_json"]))
+        except Exception:
+            raise HTTPException(status_code=500, detail="Failed to deserialize stored results.")
+
         return ScheduleStatusResponse(
             task_id=task_id,
             state="complete",
             message="Optimization complete.",
-            result=_build_result(job["result"]),
+            result=result_data,
         )
 
-    if job["state"] == "error":
-        return ScheduleStatusResponse(task_id=task_id, state="error", message=job.get("message", ""))
+    if run["status"] == "error":
+        return ScheduleStatusResponse(
+            task_id=task_id,
+            state="error",
+            message=run.get("error_message") or "",
+        )
 
     raise HTTPException(
         status_code=404,
-        detail=f"Results not available yet. Task state: {job['state']}",
+        detail=f"Results not available yet. Task state: {run['status']}",
     )
 
 

@@ -1,0 +1,40 @@
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | schedule:upload_and_schedule:305 | File uploaded for task 7fc1bb81-f60f-406c-bb2e-9561d2603986. Starting FCFS optimization.
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | main:on_startup:76 | ShopFloorScheduler API starting up (v1.0.0).
+2026-06-29 10:03:34 | INFO     | main:on_startup:77 | Swagger docs available at http://localhost:8000/docs
+2026-06-29 10:03:34 | INFO     | history:get_history:86 | History query: page=1, page_size=10, total=0
+2026-06-29 10:03:34 | INFO     | main:on_shutdown:82 | ShopFloorScheduler API shutting down.
+2026-06-29 10:03:34 | INFO     | data_loader:load_data_from_json:169 | Loading data from JSON: C:\ShopFloorScheduler\tests\..\data.json
+2026-06-29 10:03:34 | INFO     | data_loader:load_data_from_json:187 | JSON loaded: 3 machines, 5 jobs.
+2026-06-29 10:03:34 | INFO     | data_loader:load_data_from_excel:70 | Loading data from Excel: C:\ShopFloorScheduler\tests\..\data.xlsx
+2026-06-29 10:03:34 | INFO     | data_loader:load_data_from_excel:105 | Excel loaded successfully: 6 machines, 20 jobs.
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:40 | Running Genetic Algorithm (Multi-Objective) | Pop=10, Gen=5, M-Rate=0.1
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:41 | Fitness Weights: Makespan=0.6, Tardiness=0.4
+2026-06-29 10:03:34 | INFO     | genetic_algorithm:run_genetic_algorithm:93 | Genetic Algorithm finished. Best makespan: 31

@@ -9,11 +9,11 @@ This document serves as the permanent knowledge base and single source of truth 
 *   **Project Name:** ShopFloorScheduler (also referred to as PyShop Scheduler)
 *   **Purpose:** An AI-powered production scheduling and optimization system designed to solve complex Job Shop Scheduling problems. It automatically generates near-optimal schedules that minimize makespan (total completion time) and job tardiness while honoring real-world constraints such as machine unavailability/maintenance windows and setup times.
 *   **Current Development Stage:** Phase 1 complete. A Next.js (TypeScript) dashboard frontend and a FastAPI backend with SQLAlchemy/SQLite database integration have been built.
-*   **High-Level Architecture:**
+    *   **High-Level Architecture:**
     *   **Frontend:** React/Next.js dashboard app.
     *   **Backend:** FastAPI web server implementing RESTful APIs.
-    *   **Database:** SQLite database (`shopfloor.db`) managed via SQLAlchemy ORM.
-    *   **Background Tasks:** In-process background threading (`threading.Thread`) serves as the async worker engine. (Note: Celery is configured via Redis, but currently bypassed in the FastAPI endpoints).
+    *   **Database:** SQLite database (`shopfloor.db`) managed via SQLAlchemy ORM. All task state is persisted here — no in-memory caching.
+    *   **Background Tasks:** In-process background threading (`threading.Thread`) serves as the async worker engine. Task state is written directly to SQLite so it survives server restarts. (Note: Celery is configured via Redis, but currently bypassed in the FastAPI endpoints).
     *   **Optimization Layer:** Pure Python implementation of heuristics and a Multi-Objective Genetic Algorithm.
 *   **Main Technologies:**
     *   Python 3.10+, FastAPI, Pydantic v2, SQLAlchemy 2.x, Loguru, Matplotlib, Pandas, openpyxl.
@@ -82,6 +82,13 @@ ShopFloorScheduler/
 ├── output/                      # Generated Excel reports (schedule_*.xlsx)
 ├── static/                      # Generated Gantt chart images (gantt_*.png)
 ├── uploads/                     # Uploaded raw Excel files (uuid.xlsx)
+├── tests/                       # Pytest Test Suite
+│   ├── conftest.py              # Shared fixtures (sample data, test DB, TestClient)
+│   ├── test_api.py              # FastAPI endpoint integration tests
+│   ├── test_data_loader.py      # Data parsing and loading tests
+│   ├── test_engine.py           # Scheduling algorithm tests (FCFS, SPT, EDD, WSPT)
+│   ├── test_genetic_algorithm.py # GA component and end-to-end tests
+│   └── test_metrics.py          # KPI metric calculation tests
 ├── celery_app.py                # Celery instance configuration
 ├── config.ini                   # CLI settings & hyperparameter configurations
 ├── data_loader.py               # Raw excel, json, and gspread data loading functions
@@ -89,7 +96,7 @@ ShopFloorScheduler/
 ├── genetic_algorithm.py         # Genetic algorithm logic
 ├── main.py                      # CLI runner script
 ├── models.py                    # Domain model classes (Job, Operation, Machine)
-├── requirements.txt             # Python dependency list
+├── requirements.txt             # Python dependency list (includes pytest, httpx)
 ├── shopfloor.db                 # SQLite database file
 ├── tempCodeRunnerFile.py        # Temporary script execution cache
 └── visualization.py             # Matplotlib rendering wrapper
@@ -295,6 +302,9 @@ FastAPI routes are grouped under their specific domains:
     *   `avg_flow_time` (float): Average flow time metrics.
     *   `on_time_percent` (float): On-time completion percentage.
     *   `error_message` (str): Error message (if run failed).
+    *   `chart_url` (str): URL to the generated Gantt chart PNG.
+    *   `excel_url` (str): URL to download the generated Excel report.
+    *   `result_json` (str/Text): Full serialized JSON result payload (schedule, utilization, URLs). Used for fast status/results endpoint responses without JOINs.
 *   **`JobRecord`** (Table: `job_records`)
     *   `id` (int, PK): Auto-increment identifier.
     *   `run_id` (int, FK): Associated `ScheduleRun.id`.
@@ -366,17 +376,23 @@ The original bugs documented here (GA unpacking error and Excel exporter paramet
 
 ### 2. Bypassed Task Queue Infrastructure
 *   Although `celery_app.py` and `scheduler/tasks.py` are configured for Redis, the endpoints in `api/routers/schedule.py` bypass Celery. Instead, they spawn in-process background threads (`threading.Thread`).
-*   This makes background tasks vulnerable to server restarts (tasks in memory are lost) and prevents horizontal scaling.
+*   Tasks now persist state directly to SQLite, so in-progress tasks survive server restarts (state is recoverable). However, horizontal scaling still requires Celery.
 
-### 3. In-Memory State Cache
-*   The `_JOBS` dictionary in `api/routers/schedule.py` handles active status polling. In a multi-worker production environment, this will cause state tracking issues. It should be replaced with Redis or SQLite queries.
+### ~~3. In-Memory State Cache~~ (RESOLVED)
+*   The `_JOBS` dictionary has been **removed** from `api/routers/schedule.py`. All task state (pending → processing → complete/error) is now read from and written to SQLite exclusively. The `result_json` column stores the full serialized result payload. Status and results endpoints query the database directly.
 
 ### 4. Code Duplication
 *   `app.py` (legacy Flask app) and `api/routers/schedule.py` duplicate dataset parsing, scheduling calls, metrics generation, and file exporting.
 *   The fitness logic in `genetic_algorithm.py` (`calculate_tardiness`) duplicates logic in `scheduler/metrics.py`.
 
-### 5. Missing Test Coverage
-*   There are no unit or integration tests for the scheduling algorithms, GA constraints, API endpoints, or file parsers.
+### ~~5. Missing Test Coverage~~ (RESOLVED)
+*   A comprehensive Pytest test suite has been added in `tests/` with 59 tests covering:
+    *   Scheduling algorithms (FCFS, SPT, EDD, WSPT) — setup time, unavailability, precedence, no-overlap constraints.
+    *   Metric calculations (makespan, tardiness, utilization, flow time, on-time %).
+    *   Genetic algorithm components (population, crossover, mutation, selection) and end-to-end runs.
+    *   Data loader parsing (operations, unavailability periods, Excel, JSON).
+    *   API endpoints (health, upload validation, status, results, history pagination).
+*   Run with: `python -m pytest tests/ -v`
 
 ---
 
@@ -408,11 +424,11 @@ The roadmap has been planned in distinct implementation phases:
 *   [x] **TASK-14:** Scheduling run persistence logic.
 *   [x] **TASK-15:** Paginated run history endpoint.
 
-### Phase 2: Production Readiness (Pending/Planned)
+### Phase 2: Production Readiness (Complete / In-Progress)
 *   [x] **Fix critical API bugs:** Resolved swapped return-value unpacking in `api/routers/schedule.py` (was `jobs, machines = ...`, corrected to `machines, jobs = ...`).
-*   [ ] **Celery Integration:** Route tasks through the Celery worker queue instead of in-process threads.
-*   [ ] **Database Polling:** Transition status polling from the in-memory `_JOBS` dictionary to database queries.
-*   [ ] **Testing Suite:** Add Pytest coverage for engine computations and API routing.
+*   [ ] **Celery Integration:** Route tasks through the Celery worker queue instead of in-process threads. (Deferred — requires Redis on the host).
+*   [x] **Database Polling:** Removed the `_JOBS` in-memory dictionary. All status polling now queries SQLite directly. Added `result_json`, `chart_url`, `excel_url` columns to `ScheduleRun`.
+*   [x] **Testing Suite:** Added 59 Pytest tests across 5 modules covering engine, metrics, GA, data loader, and API endpoints.
 
 ### Phase 3: Enterprise Features (Future Roadmap)
 *   [ ] **Authentication:** JWT-based user authentication.

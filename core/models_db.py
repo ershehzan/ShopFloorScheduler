@@ -35,6 +35,9 @@ class ScheduleRun(Base):
     avg_flow_time: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     on_time_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    chart_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    excel_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    result_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     jobs: Mapped[List["JobRecord"]] = relationship(
