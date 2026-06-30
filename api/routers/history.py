@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from core.database import get_db
 from core.models_db import ScheduleRun
 from core.logger import logger
+from core.security import get_optional_user
 
 router = APIRouter(prefix="/api/history", tags=["History"])
 
@@ -60,8 +61,13 @@ def get_history(
     algorithm: Optional[str] = Query(default=None, description="Filter by algorithm (e.g. GA, FCFS)"),
     status: Optional[str] = Query(default=None, description="Filter by status (pending, processing, complete, error)"),
     db: Session = Depends(get_db),
+    current_user=Depends(get_optional_user),
 ) -> HistoryResponse:
     query = db.query(ScheduleRun)
+
+    # Authenticated non-admin users see only their own runs
+    if current_user and not current_user.is_admin:
+        query = query.filter(ScheduleRun.user_id == current_user.id)
 
     if algorithm:
         query = query.filter(ScheduleRun.algorithm == algorithm.upper())

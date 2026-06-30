@@ -197,3 +197,176 @@ class HealthResponse(BaseModel):
 
     status: str = Field(default="ok")
     version: str = Field(default="1.0.0")
+
+
+# ---------------------------------------------------------------------------
+# Authentication schemas (Phase 3)
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    """Request body for user registration."""
+
+    email: str = Field(..., description="User email address.", min_length=5, max_length=255)
+    username: str = Field(..., description="Display name.", min_length=3, max_length=100)
+    password: str = Field(..., description="Account password.", min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Invalid email format.")
+        return v.lower().strip()
+
+
+class LoginRequest(BaseModel):
+    """Request body for user login."""
+
+    email: str = Field(..., description="User email address.")
+    password: str = Field(..., description="Account password.")
+
+
+class TokenResponse(BaseModel):
+    """JWT token pair returned on successful login/refresh."""
+
+    access_token: str = Field(..., description="Short-lived JWT access token (30 min).")
+    refresh_token: str = Field(..., description="Long-lived JWT refresh token (7 days).")
+    token_type: str = Field(default="bearer")
+
+
+class RefreshRequest(BaseModel):
+    """Request body for token refresh or logout."""
+
+    refresh_token: str = Field(..., description="The refresh token to exchange or revoke.")
+
+
+class UserProfile(BaseModel):
+    """Current user profile response."""
+
+    id: int
+    email: str
+    username: str
+    is_active: bool
+    is_admin: bool
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
+# Analytics schemas (Phase 3)
+# ---------------------------------------------------------------------------
+
+class AnalyticsSummary(BaseModel):
+    """Aggregate KPIs across all completed runs."""
+
+    total_runs: int = Field(..., description="Total number of completed schedule runs.")
+    avg_makespan: float = Field(..., description="Average makespan across completed runs.")
+    avg_tardiness: float = Field(..., description="Average total tardiness.")
+    avg_utilization: float = Field(..., description="Average machine utilization (0-1).")
+    avg_on_time_percent: float = Field(..., description="Average on-time completion percentage.")
+    best_makespan: float = Field(..., description="Best (lowest) makespan achieved.")
+    best_algorithm: Optional[str] = Field(None, description="Algorithm that achieved the best makespan.")
+
+
+class TrendPoint(BaseModel):
+    """Single data point in a time-series trend."""
+
+    task_id: str
+    created_at: str
+    algorithm: Optional[str] = None
+    makespan: Optional[float] = None
+    total_tardiness: Optional[float] = None
+    avg_flow_time: Optional[float] = None
+    on_time_percent: Optional[float] = None
+
+
+class TrendsResponse(BaseModel):
+    """Time-series trend data for analytics charts."""
+
+    points: list[TrendPoint] = Field(default_factory=list)
+    total: int = 0
+
+
+class HeatmapCell(BaseModel):
+    """Single cell in the utilization heatmap."""
+
+    task_id: str
+    machine_id: int
+    utilization: float
+
+
+class HeatmapResponse(BaseModel):
+    """Machine utilization heatmap data."""
+
+    cells: list[HeatmapCell] = Field(default_factory=list)
+    machines: list[int] = Field(default_factory=list, description="All machine IDs.")
+    runs: list[str] = Field(default_factory=list, description="Task IDs of included runs.")
+
+
+class AlgorithmStats(BaseModel):
+    """Aggregate stats for a single algorithm."""
+
+    algorithm: str
+    run_count: int
+    avg_makespan: float
+    avg_tardiness: float
+    avg_on_time_percent: float
+    best_makespan: float
+
+
+class AlgorithmComparisonResponse(BaseModel):
+    """Side-by-side algorithm performance comparison."""
+
+    algorithms: list[AlgorithmStats] = Field(default_factory=list)
+
+
+class TardinessDistributionResponse(BaseModel):
+    """Histogram data for tardiness distribution."""
+
+    buckets: list[str] = Field(default_factory=list, description="Bucket labels (e.g., '0-5', '5-10').")
+    counts: list[int] = Field(default_factory=list, description="Number of jobs in each bucket.")
+    total_jobs: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Rescheduling schemas (Phase 3)
+# ---------------------------------------------------------------------------
+
+class BreakdownRequest(BaseModel):
+    """Request to report a machine breakdown and trigger rescheduling."""
+
+    task_id: str = Field(..., description="Task ID of the original schedule to reschedule.")
+    machine_id: int = Field(..., description="ID of the broken machine.", ge=0)
+    downtime_start: int = Field(..., description="Start time of the breakdown.", ge=0)
+    downtime_end: int = Field(..., description="End time of the breakdown.", ge=1)
+
+    @field_validator("downtime_end")
+    @classmethod
+    def validate_downtime_range(cls, v: int, info) -> int:
+        start = info.data.get("downtime_start", 0)
+        if v <= start:
+            raise ValueError("downtime_end must be greater than downtime_start.")
+        return v
+
+
+class RushOrderOperation(BaseModel):
+    """A single operation in a rush order."""
+
+    machine_id: int = Field(..., ge=0)
+    processing_time: int = Field(..., ge=1)
+
+
+class RushJobSchema(BaseModel):
+    """Definition of a rush job to insert."""
+
+    job_id: int = Field(..., ge=1)
+    operations: list[RushOrderOperation] = Field(..., min_length=1)
+    due_date: int = Field(..., ge=0)
+    priority: int = Field(default=10, ge=1, description="Higher = more urgent.")
+
+
+class RushOrderRequest(BaseModel):
+    """Request to inject a rush order into an existing schedule."""
+
+    task_id: str = Field(..., description="Task ID of the original schedule.")
+    rush_job: RushJobSchema = Field(..., description="The rush job to inject.")
+
+
