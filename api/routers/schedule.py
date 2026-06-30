@@ -16,7 +16,7 @@ import os
 import uuid
 import threading
 
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 
 from api.schemas import (
@@ -27,6 +27,7 @@ from api.schemas import (
     UtilizationSchema,
 )
 from core.logger import logger
+from core.security import get_optional_user
 
 router = APIRouter(prefix="/api/schedule", tags=["Scheduling"])
 
@@ -120,6 +121,7 @@ def _run_schedule_background(
         from genetic_algorithm import run_genetic_algorithm
         from core.database import SessionLocal
         from core.models_db import ScheduleRun, JobRecord, OperationRecord
+        from api.routers.ws import send_task_progress_sync, send_global_notification_sync
 
         logger.info("Task {}: Loading data from {}", task_id, filepath)
         machines, jobs = load_data_from_excel(filepath)
@@ -127,6 +129,17 @@ def _run_schedule_background(
         logger.info("Task {}: Running {} algorithm", task_id, algorithm)
 
         if algorithm == "GA":
+            # Build WebSocket progress callback
+            def _ws_progress(generation, total_generations, best_fitness):
+                percent = round((generation / total_generations) * 100, 1)
+                send_task_progress_sync(task_id, {
+                    "type": "progress",
+                    "generation": generation,
+                    "total_generations": total_generations,
+                    "best_fitness": round(best_fitness, 2),
+                    "percent": percent,
+                })
+
             best_schedule = run_genetic_algorithm(
                 jobs=jobs,
                 machines=machines,
@@ -137,6 +150,7 @@ def _run_schedule_background(
                 tourn_size=tournament_size,
                 w_makespan=w_makespan,
                 w_tardiness=w_tardiness,
+                progress_callback=_ws_progress,
             )
         else:
             fn = ALGORITHM_MAP.get(algorithm)
@@ -254,9 +268,33 @@ def _run_schedule_background(
             metrics.get("total_tardiness"),
         )
 
+        # Push completion via WebSocket
+        send_task_progress_sync(task_id, {
+            "type": "complete",
+            "result": result,
+        })
+        send_global_notification_sync({
+            "type": "run_completed",
+            "task_id": task_id,
+            "algorithm": algorithm,
+            "makespan": metrics.get("makespan"),
+            "total_tardiness": metrics.get("total_tardiness"),
+        })
+
     except Exception as exc:
         logger.error("Task {}: Failed — {}", task_id, str(exc))
         _update_run_status(task_id, "error", message=str(exc))
+
+        # Push error via WebSocket
+        send_task_progress_sync(task_id, {
+            "type": "error",
+            "message": str(exc),
+        })
+        send_global_notification_sync({
+            "type": "run_failed",
+            "task_id": task_id,
+            "error": str(exc),
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +317,7 @@ async def upload_and_schedule(
     tournament_size: int = Form(default=3, ge=2, le=20),
     w_makespan: float = Form(default=0.6, ge=0.0, le=1.0),
     w_tardiness: float = Form(default=0.4, ge=0.0, le=1.0),
+    current_user=Depends(get_optional_user),
 ) -> UploadResponse:
     # Validate file type
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
@@ -314,6 +353,8 @@ async def upload_and_schedule(
             status="pending",
             algorithm=algorithm,
             file_name=original_filename,
+            user_id=current_user.id if current_user else None,
+            trigger_type="initial",
         ))
         db.commit()
         db.close()

@@ -13,7 +13,7 @@ import random
 import copy
 from core.logger import logger
 
-def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rate, tourn_size, w_makespan, w_tardiness):
+def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rate, tourn_size, w_makespan, w_tardiness, progress_callback=None):
     """
     Runs the complete Genetic Algorithm to find a near-optimal schedule.
     
@@ -27,7 +27,9 @@ def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rat
         tourn_size (int): The number of individuals in a selection tournament.
         w_makespan (float): The weight for the makespan objective.
         w_tardiness (float): The weight for the tardiness objective.
-        
+        progress_callback: Optional callable(generation, total_generations, best_fitness)
+            for real-time WebSocket progress reporting (Phase 3).
+
     Returns:
         list: The best schedule found by the algorithm.
     """
@@ -88,6 +90,17 @@ def run_genetic_algorithm(jobs, machines, setup_time, pop_size, num_gen, mut_rat
             next_generation.append(child)
         
         population = next_generation
+
+        # Phase 3: Report progress via callback (for WebSocket push)
+        if progress_callback:
+            try:
+                progress_callback(
+                    generation=gen + 1,
+                    total_generations=num_gen,
+                    best_fitness=best_overall_fitness,
+                )
+            except Exception:
+                pass  # Don't let callback errors break the GA
 
     final_makespan = max(op[4] for op in best_overall_schedule) if best_overall_schedule else 0
     logger.info("Genetic Algorithm finished. Best makespan: {}", final_makespan)

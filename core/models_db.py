@@ -3,6 +3,8 @@ core/models_db.py
 SQLAlchemy ORM models for persistent storage.
 
 Tables:
+  users              — User accounts for JWT authentication (Phase 3)
+  refresh_tokens     — JWT refresh token tracking (Phase 3)
   schedule_runs      — One row per optimization run
   job_records        — One row per job in a run
   operation_records  — One row per machine operation in a run
@@ -11,12 +13,60 @@ import datetime
 from typing import Optional, List
 
 from sqlalchemy import (
-    String, Integer, Float, DateTime, ForeignKey, Text, func
+    String, Integer, Float, DateTime, Boolean, ForeignKey, Text, func
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
 
+
+# ---------------------------------------------------------------------------
+# Authentication models (Phase 3)
+# ---------------------------------------------------------------------------
+
+class User(Base):
+    """User account for authentication."""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, server_default=func.now()
+    )
+
+    # Relationships
+    schedule_runs: Mapped[List["ScheduleRun"]] = relationship(
+        "ScheduleRun", back_populates="user", cascade="all, delete-orphan"
+    )
+    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
+        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class RefreshToken(Base):
+    """Tracks issued refresh tokens for revocation support."""
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    token: Mapped[str] = mapped_column(String(500), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, server_default=func.now()
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
+
+
+# ---------------------------------------------------------------------------
+# Scheduling models
+# ---------------------------------------------------------------------------
 
 class ScheduleRun(Base):
     """Top-level record for a single optimization run."""
@@ -39,7 +89,24 @@ class ScheduleRun(Base):
     excel_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     result_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Phase 3: User ownership (nullable for backward compat with existing anonymous runs)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+
+    # Phase 3: Rescheduling lineage
+    parent_run_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("schedule_runs.id"), nullable=True
+    )
+    trigger_type: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, default="initial"
+    )  # "initial", "breakdown", "rush_order"
+
     # Relationships
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="schedule_runs")
+    parent_run: Mapped[Optional["ScheduleRun"]] = relationship(
+        "ScheduleRun", remote_side="ScheduleRun.id", uselist=False
+    )
     jobs: Mapped[List["JobRecord"]] = relationship(
         "JobRecord", back_populates="run", cascade="all, delete-orphan"
     )
