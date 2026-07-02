@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, AlertTriangle, Zap, Play, Plus, Trash2, Clock } from "lucide-react";
 import KPICards from "@/components/results/KPICards";
 import ExportButtons from "@/components/results/ExportButtons";
 import GanttChart from "@/components/gantt/GanttChart";
-import { getResults, StatusResponse } from "@/lib/api";
+import { getResults, StatusResponse, rescheduleBreakdown, rescheduleRushOrder } from "@/lib/api";
 
 export default function ResultsPage({ params }: { params: Promise<{ taskId: string }> }) {
   const router = useRouter();
@@ -31,6 +31,85 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
         setLoading(false);
       });
   }, [taskId]);
+
+  // Rescheduling states
+  const [activeTab, setActiveTab] = useState<"breakdown" | "rush">("breakdown");
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+
+  // Breakdown fields
+  const [brokenMachine, setBrokenMachine] = useState("");
+  const [downtimeStart, setDowntimeStart] = useState("");
+  const [downtimeEnd, setDowntimeEnd] = useState("");
+
+  // Rush order fields
+  const [rushJobId, setRushJobId] = useState("");
+  const [rushDueDate, setRushDueDate] = useState("");
+  const [rushPriority, setRushPriority] = useState("10");
+  const [rushOps, setRushOps] = useState<{ machine_id: number; processing_time: number }[]>([
+    { machine_id: 1, processing_time: 5 },
+  ]);
+
+  const handleAddRushOp = () => {
+    // Select first machine or default to 0
+    const defMachine = result?.utilization?.[0]?.machine_id ?? 0;
+    setRushOps((prev) => [...prev, { machine_id: defMachine, processing_time: 5 }]);
+  };
+
+  const handleRemoveRushOp = (index: number) => {
+    setRushOps((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRushOpChange = (index: number, field: "machine_id" | "processing_time", value: number) => {
+    setRushOps((prev) =>
+      prev.map((op, i) => (i === index ? { ...op, [field]: value } : op))
+    );
+  };
+
+  const handleBreakdownSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskId || !brokenMachine || !downtimeStart || !downtimeEnd) return;
+
+    setRescheduleLoading(true);
+    setRescheduleError(null);
+
+    try {
+      const res = await rescheduleBreakdown({
+        task_id: taskId,
+        machine_id: parseInt(brokenMachine),
+        downtime_start: parseInt(downtimeStart),
+        downtime_end: parseInt(downtimeEnd),
+      });
+      router.push(`/schedule/status/${res.task_id}`);
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : "Rescheduling failed.");
+      setRescheduleLoading(false);
+    }
+  };
+
+  const handleRushSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskId || !rushJobId || !rushDueDate || rushOps.length === 0) return;
+
+    setRescheduleLoading(true);
+    setRescheduleError(null);
+
+    try {
+      const res = await rescheduleRushOrder({
+        task_id: taskId,
+        rush_job: {
+          job_id: parseInt(rushJobId),
+          due_date: parseInt(rushDueDate),
+          priority: parseInt(rushPriority),
+          operations: rushOps,
+        },
+      });
+      router.push(`/schedule/status/${res.task_id}`);
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : "Rush order injection failed.");
+      setRescheduleLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -212,6 +291,269 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* Dynamic Rescheduling Section */}
+      {result.schedule.length > 0 && (
+        <div className="card" style={{ marginBottom: 24, padding: 24 }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+            <RefreshCw size={18} className="animate-spin-slow" />
+            Dynamic Rescheduling Control Room
+          </h2>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: 20 }}>
+            Respond to live factory disturbances by reporting breakdowns or injecting urgent rush orders.
+          </p>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+            <button
+              onClick={() => setActiveTab("breakdown")}
+              type="button"
+              className={`btn ${activeTab === "breakdown" ? "btn-primary" : "btn-ghost"}`}
+              style={{ gap: 6, height: 36, fontSize: "0.875rem" }}
+            >
+              <AlertTriangle size={14} />
+              Report Machine Breakdown
+            </button>
+            <button
+              onClick={() => setActiveTab("rush")}
+              type="button"
+              className={`btn ${activeTab === "rush" ? "btn-primary" : "btn-ghost"}`}
+              style={{ gap: 6, height: 36, fontSize: "0.875rem" }}
+            >
+              <Zap size={14} />
+              Inject Rush Order
+            </button>
+          </div>
+
+          {rescheduleError && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 14px",
+                background: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                borderRadius: "var(--radius-md)",
+                color: "var(--error)",
+                fontSize: "0.875rem",
+                marginBottom: 16,
+              }}
+            >
+              <AlertTriangle size={14} />
+              {rescheduleError}
+            </div>
+          )}
+
+          {/* Breakdown Form */}
+          {activeTab === "breakdown" && (
+            <form onSubmit={handleBreakdownSubmit}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, alignItems: "flex-end" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Select Broken Machine
+                  </label>
+                  <select
+                    value={brokenMachine}
+                    onChange={(e) => setBrokenMachine(e.target.value)}
+                    className="input"
+                    required
+                    style={{ height: 38, background: "var(--bg-secondary)" }}
+                  >
+                    <option value="">-- Choose Machine --</option>
+                    {result.utilization.map((u) => (
+                      <option key={u.machine_id} value={u.machine_id}>
+                        Machine {u.machine_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Breakdown Start (Time Unit)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={downtimeStart}
+                    onChange={(e) => setDowntimeStart(e.target.value)}
+                    placeholder="e.g. 5"
+                    className="input"
+                    style={{ height: 38 }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Recovery End (Time Unit)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={downtimeEnd}
+                    onChange={(e) => setDowntimeEnd(e.target.value)}
+                    placeholder="e.g. 15"
+                    className="input"
+                    style={{ height: 38 }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ marginTop: 20, gap: 8, height: 38, width: "100%", justifyContent: "center" }}
+                disabled={rescheduleLoading}
+              >
+                {rescheduleLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Generating Reschedule...
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} />
+                    Trigger Breakdown Rescheduling
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Rush Order Form */}
+          {activeTab === "rush" && (
+            <form onSubmit={handleRushSubmit}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    New Job ID
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={rushJobId}
+                    onChange={(e) => setRushJobId(e.target.value)}
+                    placeholder="e.g. 99"
+                    className="input"
+                    style={{ height: 38 }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Due Date (Time Unit)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={rushDueDate}
+                    onChange={(e) => setRushDueDate(e.target.value)}
+                    placeholder="e.g. 20"
+                    className="input"
+                    style={{ height: 38 }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Priority (1-20, default 10)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="20"
+                    value={rushPriority}
+                    onChange={(e) => setRushPriority(e.target.value)}
+                    className="input"
+                    style={{ height: 38 }}
+                  />
+                </div>
+              </div>
+
+              {/* Operations Sequence */}
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: 8, color: "var(--text-primary)" }}>
+                  Operations Sequence (Order Matters)
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, background: "var(--bg-secondary)", padding: 12, borderRadius: "var(--radius-md)" }}>
+                  {rushOps.map((op, idx) => (
+                    <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", width: 48 }}>
+                        Op {idx + 1}
+                      </span>
+                      <select
+                        value={op.machine_id}
+                        onChange={(e) => handleRushOpChange(idx, "machine_id", parseInt(e.target.value))}
+                        className="input"
+                        style={{ flex: 1, height: 34, background: "var(--bg-primary)" }}
+                      >
+                        {result.utilization.map((u) => (
+                          <option key={u.machine_id} value={u.machine_id}>
+                            Machine {u.machine_id}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={op.processing_time}
+                        onChange={(e) => handleRushOpChange(idx, "processing_time", parseInt(e.target.value))}
+                        placeholder="Duration"
+                        className="input"
+                        style={{ width: 100, height: 34 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRushOp(idx)}
+                        disabled={rushOps.length === 1}
+                        className="btn btn-ghost"
+                        style={{ padding: 4, height: 34, width: 34, color: "var(--error)" }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddRushOp}
+                    className="btn btn-ghost"
+                    style={{ gap: 6, height: 32, fontSize: "0.8125rem", border: "1px dashed var(--border)", width: "100%", justifyContent: "center" }}
+                  >
+                    <Plus size={14} />
+                    Add Operation Step
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ gap: 8, height: 38, width: "100%", justifyContent: "center" }}
+                disabled={rescheduleLoading}
+              >
+                {rescheduleLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Injecting Rush Order...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={14} />
+                    Inject Rush Job into Schedule
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       )}
 

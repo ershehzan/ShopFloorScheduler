@@ -72,23 +72,167 @@ export interface HistoryResponse {
   pages: number;
 }
 
+// Rescheduling Types
+export interface BreakdownRequest {
+  task_id: string;
+  machine_id: number;
+  downtime_start: number;
+  downtime_end: number;
+}
+
+export interface RushJobOperation {
+  machine_id: number;
+  processing_time: number;
+}
+
+export interface RushJobSchema {
+  job_id: number;
+  operations: RushJobOperation[];
+  due_date: number;
+  priority: number;
+}
+
+export interface RushOrderRequest {
+  task_id: string;
+  rush_job: RushJobSchema;
+}
+
+// Analytics Types
+export interface AnalyticsSummaryData {
+  total_runs: number;
+  avg_makespan: number;
+  avg_tardiness: number;
+  avg_utilization: number;
+  avg_on_time_percent: number;
+  best_makespan: number;
+  best_algorithm: string | null;
+}
+
+export interface TrendPoint {
+  task_id: string;
+  created_at: string;
+  algorithm: string | null;
+  makespan: number | null;
+  total_tardiness: number | null;
+  avg_flow_time: number | null;
+  on_time_percent: number | null;
+}
+
+export interface TrendsResponse {
+  points: TrendPoint[];
+  total: number;
+}
+
+export interface HeatmapCell {
+  task_id: string;
+  machine_id: number;
+  utilization: number;
+}
+
+export interface HeatmapResponse {
+  cells: HeatmapCell[];
+  machines: number[];
+  runs: string[];
+}
+
+export interface AlgorithmStats {
+  algorithm: string;
+  run_count: number;
+  avg_makespan: number;
+  avg_tardiness: number;
+  avg_on_time_percent: number;
+  best_makespan: number;
+}
+
+export interface AlgorithmComparisonResponse {
+  algorithms: AlgorithmStats[];
+}
+
+export interface TardinessDistributionResponse {
+  buckets: string[];
+  counts: number[];
+  total_jobs: number;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(
   path: string,
-  options?: RequestInit
+  options: RequestInit = {}
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
+
+  // Attach token if present in localStorage
+  const headers = new Headers(options.headers || {});
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let response = await fetch(url, {
     ...options,
+    headers,
   });
+
+  // Handle Token Expiry (401 Unauthorized) & Auto-Refresh
+  if (
+    response.status === 401 &&
+    path !== "/api/auth/login" &&
+    path !== "/api/auth/refresh" &&
+    typeof window !== "undefined"
+  ) {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/api/auth/refresh`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        if (refreshRes.ok) {
+          const keyData = await refreshRes.json();
+          localStorage.setItem("access_token", keyData.access_token);
+          localStorage.setItem("refresh_token", keyData.refresh_token);
+
+          // Retry the request with the new access token
+          headers.set("Authorization", `Bearer ${keyData.access_token}`);
+          response = await fetch(url, {
+            ...options,
+            headers,
+          });
+        } else {
+          // Refresh token expired or revoked — clear auth and redirect to login
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user_profile");
+          window.location.href = "/login";
+        }
+      } catch (refreshErr) {
+        console.error("Auto refresh failed:", refreshErr);
+      }
+    }
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(
-      `API error ${response.status} on ${path}: ${errorBody}`
-    );
+    let errorDetail = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      errorDetail = parsed.detail || errorBody;
+    } catch (_) {}
+    throw new Error(errorDetail);
+  }
+
+  if (response.status === 204) {
+    return {} as T;
   }
   return response.json() as Promise<T>;
 }
@@ -155,4 +299,117 @@ export async function getHistory(params: {
   if (params.status) query.set("status", params.status);
   const qs = query.toString();
   return apiFetch<HistoryResponse>(`/api/history${qs ? "?" + qs : ""}`);
+}
+
+// ─── Phase 3: Rescheduling API Endpoints ─────────────────────────────────────
+
+/** POST /api/reschedule/breakdown */
+export async function rescheduleBreakdown(body: BreakdownRequest): Promise<UploadResponse> {
+  return apiFetch<UploadResponse>("/api/reschedule/breakdown", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST /api/reschedule/rush-order */
+export async function rescheduleRushOrder(body: RushOrderRequest): Promise<UploadResponse> {
+  return apiFetch<UploadResponse>("/api/reschedule/rush-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// ─── Phase 3: Analytics API Endpoints ────────────────────────────────────────
+
+/** GET /api/analytics/summary */
+export async function getAnalyticsSummary(): Promise<AnalyticsSummaryData> {
+  return apiFetch<AnalyticsSummaryData>("/api/analytics/summary");
+}
+
+/** GET /api/analytics/trends */
+export async function getAnalyticsTrends(limit: number = 20): Promise<TrendsResponse> {
+  return apiFetch<TrendsResponse>(`/api/analytics/trends?limit=${limit}`);
+}
+
+/** GET /api/analytics/utilization-heatmap */
+export async function getUtilizationHeatmap(limit: number = 10): Promise<HeatmapResponse> {
+  return apiFetch<HeatmapResponse>(`/api/analytics/utilization-heatmap?limit=${limit}`);
+}
+
+/** GET /api/analytics/algorithm-comparison */
+export async function getAlgorithmComparison(): Promise<AlgorithmComparisonResponse> {
+  return apiFetch<AlgorithmComparisonResponse>("/api/analytics/algorithm-comparison");
+}
+
+/**
+ * GET /api/analytics/tardiness-distribution
+ */
+export async function getTardinessDistribution(
+  limit: number = 10,
+  bucketSize: number = 5
+): Promise<TardinessDistributionResponse> {
+  return apiFetch<TardinessDistributionResponse>(
+    `/api/analytics/tardiness-distribution?limit=${limit}&bucket_size=${bucketSize}`
+  );
+}
+
+// ─── Authentication API Endpoints ──────────────────────────────────────────
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  username: string;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string }> {
+  const data = await apiFetch<{ access_token: string; refresh_token: string }>("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  localStorage.setItem("access_token", data.access_token);
+  localStorage.setItem("refresh_token", data.refresh_token);
+  return data;
+}
+
+export async function register(email: string, username: string, password: string): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, username, password }),
+  });
+}
+
+export async function logout(): Promise<void> {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (refreshToken) {
+    try {
+      await apiFetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch (e) {
+      console.error("Logout API call failed:", e);
+    }
+  }
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user_profile");
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile> {
+  const profile = await apiFetch<UserProfile>("/api/auth/me");
+  localStorage.setItem("user_profile", JSON.stringify(profile));
+  return profile;
+}
+
+export function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("access_token");
 }

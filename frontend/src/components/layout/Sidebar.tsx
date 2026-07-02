@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard,
   CalendarClock,
@@ -14,6 +15,7 @@ import {
   ChevronRight,
   Factory,
   History,
+  LogOut,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -33,6 +35,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   return (
     <aside
@@ -169,6 +172,84 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           );
         })}
       </nav>
+
+      {/* User profile and logout */}
+      <div
+        style={{
+          padding: "16px",
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start" }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, var(--secondary), var(--accent))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#fff" }}>
+              {user?.username?.substring(0, 2).toUpperCase() || "US"}
+            </span>
+          </div>
+          {!collapsed && (
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user?.username || "Guest User"}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user?.email || "anonymous"}
+              </div>
+            </div>
+          )}
+        </div>
+        {!collapsed ? (
+          <button
+            onClick={logout}
+            className="btn btn-ghost"
+            style={{
+              width: "100%",
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.8125rem",
+              color: "var(--error)",
+              borderColor: "rgba(239, 68, 68, 0.15)",
+              borderWidth: 1,
+              borderStyle: "solid",
+              background: "rgba(239, 68, 68, 0.02)",
+              gap: 6,
+            }}
+          >
+            <LogOut size={14} />
+            Logout
+          </button>
+        ) : (
+          <button
+            onClick={logout}
+            className="btn btn-ghost"
+            style={{
+              width: 32,
+              height: 32,
+              padding: 0,
+              borderRadius: "var(--radius-md)",
+              color: "var(--error)",
+            }}
+            title="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        )}
+      </div>
 
       {/* Toggle button */}
       <div style={{ padding: "12px", borderTop: "1px solid var(--border)" }}>

@@ -122,17 +122,44 @@ manager = ConnectionManager()
 # ---------------------------------------------------------------------------
 
 @router.websocket("/api/ws/tasks/{task_id}")
-async def websocket_task_progress(websocket: WebSocket, task_id: str):
+async def websocket_task_progress(websocket: WebSocket, task_id: str, token: Optional[str] = None):
     """
     WebSocket endpoint for real-time task progress.
-
-    Sends JSON frames:
-      - {type: "progress", generation: int, total_generations: int,
-         best_fitness: float, percent: float}
-      - {type: "complete", result: {...}}
-      - {type: "error", message: "..."}
-      - {type: "connected", task_id: "..."}
+    Requires JWT access token passed as a query parameter.
     """
+    from core.security import decode_token
+    from core.database import SessionLocal
+    from core.models_db import User, ScheduleRun
+
+    user = None
+    db = SessionLocal()
+    try:
+        if token:
+            payload = decode_token(token)
+            if payload.get("type") == "access":
+                user_id = payload.get("sub")
+                if user_id:
+                    user = db.query(User).filter(User.id == int(user_id)).first()
+        
+        if user and user.is_active:
+            # Check ownership
+            run = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+            if run and run.user_id is not None:
+                if not user.is_admin and user.id != run.user_id:
+                    user = None
+        else:
+            user = None
+    except Exception:
+        user = None
+    finally:
+        db.close()
+
+    if not user:
+        # Reject connection
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
     await manager.connect_task(task_id, websocket)
 
     # Send initial connection confirmation
@@ -145,10 +172,7 @@ async def websocket_task_progress(websocket: WebSocket, task_id: str):
     try:
         # Keep the connection alive — wait for client messages or disconnection
         while True:
-            # We don't expect meaningful client messages, but we need to
-            # read to detect disconnections
             data = await websocket.receive_text()
-            # Client can send "ping" to keep alive
             if data == "ping":
                 await websocket.send_json({"type": "pong"})
     except WebSocketDisconnect:
@@ -156,14 +180,36 @@ async def websocket_task_progress(websocket: WebSocket, task_id: str):
 
 
 @router.websocket("/api/ws/notifications")
-async def websocket_notifications(websocket: WebSocket):
+async def websocket_notifications(websocket: WebSocket, token: Optional[str] = None):
     """
     WebSocket endpoint for system-wide notifications.
-
-    Broadcasts events like:
-      - {type: "run_completed", task_id: "...", algorithm: "GA", makespan: 310}
-      - {type: "run_failed", task_id: "...", error: "..."}
+    Requires JWT access token passed as a query parameter.
     """
+    from core.security import decode_token
+    from core.database import SessionLocal
+    from core.models_db import User
+
+    user = None
+    db = SessionLocal()
+    try:
+        if token:
+            payload = decode_token(token)
+            if payload.get("type") == "access":
+                user_id = payload.get("sub")
+                if user_id:
+                    user = db.query(User).filter(User.id == int(user_id)).first()
+        if user and not user.is_active:
+            user = None
+    except Exception:
+        user = None
+    finally:
+        db.close()
+
+    if not user:
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
     await manager.connect_global(websocket)
 
     await websocket.send_json({

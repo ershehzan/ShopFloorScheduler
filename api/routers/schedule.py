@@ -27,7 +27,7 @@ from api.schemas import (
     UtilizationSchema,
 )
 from core.logger import logger
-from core.security import get_optional_user
+from core.security import get_current_user
 
 router = APIRouter(prefix="/api/schedule", tags=["Scheduling"])
 
@@ -87,6 +87,7 @@ def _get_run(task_id: str):
             "chart_url": run.chart_url,
             "excel_url": run.excel_url,
             "result_json": run.result_json,
+            "user_id": run.user_id,
         }
         return data
     finally:
@@ -317,7 +318,7 @@ async def upload_and_schedule(
     tournament_size: int = Form(default=3, ge=2, le=20),
     w_makespan: float = Form(default=0.6, ge=0.0, le=1.0),
     w_tardiness: float = Form(default=0.4, ge=0.0, le=1.0),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ) -> UploadResponse:
     # Validate file type
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
@@ -353,7 +354,7 @@ async def upload_and_schedule(
             status="pending",
             algorithm=algorithm,
             file_name=original_filename,
-            user_id=current_user.id if current_user else None,
+            user_id=current_user.id,
             trigger_type="initial",
         ))
         db.commit()
@@ -397,10 +398,18 @@ async def upload_and_schedule(
     response_model=ScheduleStatusResponse,
     summary="Poll task status",
 )
-async def get_status(task_id: str) -> ScheduleStatusResponse:
+async def get_status(
+    task_id: str,
+    current_user=Depends(get_current_user),
+) -> ScheduleStatusResponse:
     run = _get_run(task_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    # Ownership check
+    if run.get("user_id") is not None:
+        if not current_user.is_admin and current_user.id != run["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
 
     result_data = None
     if run["status"] == "complete" and run.get("result_json"):
@@ -426,10 +435,18 @@ async def get_status(task_id: str) -> ScheduleStatusResponse:
     response_model=ScheduleStatusResponse,
     summary="Get full optimization results",
 )
-async def get_results(task_id: str) -> ScheduleStatusResponse:
+async def get_results(
+    task_id: str,
+    current_user=Depends(get_current_user),
+) -> ScheduleStatusResponse:
     run = _get_run(task_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    # Ownership check
+    if run.get("user_id") is not None:
+        if not current_user.is_admin and current_user.id != run["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
 
     if run["status"] == "complete" and run.get("result_json"):
         try:
@@ -462,7 +479,22 @@ async def get_results(task_id: str) -> ScheduleStatusResponse:
 # ---------------------------------------------------------------------------
 
 @router.get("/download/{filename}", summary="Download generated Excel report")
-async def download_file(filename: str) -> FileResponse:
+async def download_file(
+    filename: str,
+    current_user=Depends(get_current_user),
+) -> FileResponse:
+    # Extract task_id from filename to check ownership
+    task_id = filename
+    if filename.startswith("schedule_") and filename.endswith(".xlsx"):
+        task_id = filename[len("schedule_"):-len(".xlsx")]
+    elif filename.startswith("gantt_") and filename.endswith(".png"):
+        task_id = filename[len("gantt_"):-len(".png")]
+
+    run = _get_run(task_id)
+    if run is not None and run.get("user_id") is not None:
+        if not current_user.is_admin and current_user.id != run["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
+
     path = os.path.join(OUTPUT_FOLDER, filename)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")

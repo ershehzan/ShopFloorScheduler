@@ -21,7 +21,7 @@ from api.schemas import (
 )
 from core.database import get_db
 from core.models_db import ScheduleRun, JobRecord, OperationRecord
-from core.security import get_optional_user
+from core.security import get_current_user
 from core.logger import logger
 from models import Job, Operation, Machine
 
@@ -79,7 +79,7 @@ def _get_schedule_from_run(run: ScheduleRun, db: Session) -> list:
 def reschedule_breakdown(
     body: BreakdownRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     from scheduler.rescheduler import reschedule_after_breakdown
     from scheduler.metrics import build_full_metrics
@@ -94,6 +94,11 @@ def reschedule_breakdown(
 
     if not original_run:
         raise HTTPException(status_code=404, detail=f"Completed run '{body.task_id}' not found.")
+
+    # Ownership check
+    if original_run.user_id is not None:
+        if not current_user.is_admin and current_user.id != original_run.user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
 
     # Reconstruct data
     original_schedule = _get_schedule_from_run(original_run, db)
@@ -216,7 +221,7 @@ def reschedule_breakdown(
 def reschedule_rush_order(
     body: RushOrderRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     from scheduler.rescheduler import insert_rush_order
     from scheduler.metrics import build_full_metrics
@@ -231,6 +236,11 @@ def reschedule_rush_order(
 
     if not original_run:
         raise HTTPException(status_code=404, detail=f"Completed run '{body.task_id}' not found.")
+
+    # Ownership check
+    if original_run.user_id is not None:
+        if not current_user.is_admin and current_user.id != original_run.user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
 
     # Reconstruct data
     original_schedule = _get_schedule_from_run(original_run, db)

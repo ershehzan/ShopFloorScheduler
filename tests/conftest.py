@@ -99,7 +99,9 @@ def _test_engine():
     """
     from sqlalchemy import create_engine
     from sqlalchemy.pool import StaticPool
+    from sqlalchemy.orm import sessionmaker
     from core.database import Base
+    import core.database
 
     engine = create_engine(
         "sqlite://",
@@ -111,8 +113,22 @@ def _test_engine():
     import core.models_db  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    
+    # Save original globals
+    old_engine = core.database.engine
+    old_session_local = core.database.SessionLocal
+    
+    # Redirect globals to test engine/sessionmaker
+    core.database.engine = engine
+    core.database.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
     yield engine
+    
+    # Restore original globals
+    core.database.engine = old_engine
+    core.database.SessionLocal = old_session_local
     Base.metadata.drop_all(bind=engine)
+
 
 
 @pytest.fixture
@@ -156,3 +172,57 @@ def client(_test_engine):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_headers(test_db):
+    """
+    Creates a test user and returns Authorization headers for authenticated requests.
+    """
+    from core.models_db import User
+    from core.security import hash_password, create_access_token
+    
+    # Check if test user exists
+    user = test_db.query(User).filter(User.email == "test@example.com").first()
+    if not user:
+        user = User(
+            email="test@example.com",
+            username="testuser",
+            hashed_password=hash_password("password123"),
+            is_active=True,
+            is_admin=False,
+        )
+        test_db.add(user)
+        test_db.commit()
+        test_db.refresh(user)
+        
+    token_data = {"sub": str(user.id), "email": user.email}
+    access_token = create_access_token(token_data)
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture
+def admin_headers(test_db):
+    """
+    Creates an admin test user and returns Authorization headers.
+    """
+    from core.models_db import User
+    from core.security import hash_password, create_access_token
+    
+    user = test_db.query(User).filter(User.email == "admin@example.com").first()
+    if not user:
+        user = User(
+            email="admin@example.com",
+            username="adminuser",
+            hashed_password=hash_password("adminpassword"),
+            is_active=True,
+            is_admin=True,
+        )
+        test_db.add(user)
+        test_db.commit()
+        test_db.refresh(user)
+        
+    token_data = {"sub": str(user.id), "email": user.email}
+    access_token = create_access_token(token_data)
+    return {"Authorization": f"Bearer {access_token}"}
+

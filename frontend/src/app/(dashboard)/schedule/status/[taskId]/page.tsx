@@ -26,25 +26,112 @@ export default function StatusPage({ params }: { params: Promise<{ taskId: strin
   useEffect(() => {
     if (!taskId) return;
 
-    const poll = async () => {
-      try {
-        const s = await getStatus(taskId);
-        setStatus(s);
-        if (s.state === "complete") {
-          clearInterval(intervalRef.current!);
-          setTimeout(() => router.push(`/schedule/results/${taskId}`), 800);
-        } else if (s.state === "error") {
-          clearInterval(intervalRef.current!);
+    let ws: WebSocket | null = null;
+    let isMounted = true;
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      console.log("WS: Falling back to HTTP polling...");
+      const poll = async () => {
+        try {
+          const s = await getStatus(taskId);
+          if (!isMounted) return;
+          setStatus(s);
+          if (s.state === "complete") {
+            if (pollInterval) clearInterval(pollInterval);
+            setTimeout(() => {
+              if (isMounted) router.push(`/schedule/results/${taskId}`);
+            }, 800);
+          } else if (s.state === "error") {
+            if (pollInterval) clearInterval(pollInterval);
+          }
+        } catch (err) {
+          if (!isMounted) return;
+          setApiError(err instanceof Error ? err.message : "Failed to fetch status.");
+          if (pollInterval) clearInterval(pollInterval);
         }
-      } catch (err) {
-        setApiError(err instanceof Error ? err.message : "Failed to fetch status.");
-        clearInterval(intervalRef.current!);
+      };
+
+      poll();
+      pollInterval = setInterval(poll, 2000);
+    };
+
+    const connectWebSocket = () => {
+      try {
+        const wsUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
+          .replace(/^http/, "ws") + `/api/ws/tasks/${taskId}`;
+        
+        console.log(`WS: Connecting to ${wsUrl}`);
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            console.log("WS Received:", data);
+
+            if (data.type === "progress") {
+              setStatus((prev) => ({
+                ...prev,
+                state: "processing",
+                message: `Optimizing... Generation ${data.generation}/${data.total_generations} (Best makespan/fitness: ${data.best_fitness})`,
+              }));
+            } else if (data.type === "complete") {
+              setStatus({
+                task_id: taskId,
+                state: "complete",
+                message: "Schedule optimization completed successfully.",
+                result: data.result,
+              });
+              if (ws) ws.close();
+              setTimeout(() => {
+                if (isMounted) router.push(`/schedule/results/${taskId}`);
+              }, 800);
+            } else if (data.type === "error") {
+              setStatus({
+                task_id: taskId,
+                state: "error",
+                message: data.message || "Optimization failed.",
+                result: null,
+              });
+              if (ws) ws.close();
+            }
+          } catch (err) {
+            console.error("Failed to parse WS payload", err);
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.error("WS connection error:", err);
+          if (isMounted) {
+            startPolling();
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log("WebSocket closed with code:", event.code);
+          // If closed prematurely (not completed/error state), trigger polling
+          if (event.code !== 1000 && isMounted && status.state !== "complete" && status.state !== "error") {
+            startPolling();
+          }
+        };
+      } catch (wsSetupErr) {
+        console.error("Failed to initialize WebSocket, falling back to HTTP polling:", wsSetupErr);
+        startPolling();
       }
     };
 
-    poll();
-    intervalRef.current = setInterval(poll, 2000);
-    return () => clearInterval(intervalRef.current!);
+    connectWebSocket();
+
+    return () => {
+      isMounted = false;
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        ws.close();
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
   }, [taskId, router]);
 
   return (

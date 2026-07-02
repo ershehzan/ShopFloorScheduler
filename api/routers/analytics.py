@@ -28,7 +28,7 @@ from api.schemas import (
 )
 from core.database import get_db
 from core.models_db import ScheduleRun, JobRecord
-from core.security import get_optional_user
+from core.security import get_current_user
 from core.logger import logger
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 )
 def get_summary(
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     query = db.query(ScheduleRun).filter(ScheduleRun.status == "complete")
 
@@ -107,7 +107,7 @@ def get_summary(
 def get_trends(
     limit: int = Query(default=20, ge=1, le=200, description="Number of recent runs to include"),
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     query = db.query(ScheduleRun).filter(ScheduleRun.status == "complete")
 
@@ -152,7 +152,7 @@ def get_trends(
 def get_utilization_heatmap(
     limit: int = Query(default=10, ge=1, le=50, description="Number of recent runs"),
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     query = db.query(ScheduleRun).filter(ScheduleRun.status == "complete")
 
@@ -206,7 +206,7 @@ def get_utilization_heatmap(
 )
 def get_algorithm_comparison(
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     query = db.query(ScheduleRun).filter(
         ScheduleRun.status == "complete",
@@ -257,7 +257,7 @@ def get_tardiness_distribution(
     limit: int = Query(default=10, ge=1, le=50, description="Number of recent runs to analyze"),
     bucket_size: int = Query(default=5, ge=1, le=50, description="Width of each histogram bucket"),
     db: Session = Depends(get_db),
-    current_user=Depends(get_optional_user),
+    current_user=Depends(get_current_user),
 ):
     query = db.query(ScheduleRun).filter(ScheduleRun.status == "complete")
 

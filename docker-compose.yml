@@ -1,0 +1,81 @@
+services:
+  # ─── PostgreSQL Database ──────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: shopfloor-db
+    restart: always
+    environment:
+      POSTGRES_USER: shopfloor_admin
+      POSTGRES_PASSWORD: admin_secret_pass_123
+      POSTGRES_DB: shopfloor_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shopfloor-net
+
+  # ─── Redis Cache / Message Broker ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: shopfloor-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - shopfloor-net
+
+  # ─── FastAPI Backend ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shopfloor-api
+    restart: always
+    command: sh -c "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://shopfloor_admin:admin_secret_pass_123@db:5432/shopfloor_db
+      - JWT_SECRET_KEY=change-me-in-production-secure-32-bytes-key-!!!
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_volume:/app/uploads
+      - output_volume:/app/output
+      - static_volume:/app/static
+    depends_on:
+      - db
+      - redis
+    networks:
+      - shopfloor-net
+
+  # ─── Next.js Frontend ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shopfloor-frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - shopfloor-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_volume:
+  output_volume:
+  static_volume:
+
+networks:
+  shopfloor-net:
+    driver: bridge

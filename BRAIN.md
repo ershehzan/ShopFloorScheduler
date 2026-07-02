@@ -430,14 +430,14 @@ The roadmap has been planned in distinct implementation phases:
 *   [x] **Database Polling:** Removed the `_JOBS` in-memory dictionary. All status polling now queries SQLite directly. Added `result_json`, `chart_url`, `excel_url` columns to `ScheduleRun`.
 *   [x] **Testing Suite:** Added 59 Pytest tests across 5 modules covering engine, metrics, GA, data loader, and API endpoints.
 
-### Phase 3: Enterprise Features (Future Roadmap)
-*   [ ] **Authentication:** JWT-based user authentication.
-*   [ ] **PostgreSQL Migration:** Transition database backend to PostgreSQL.
-*   [ ] **Dynamic Rescheduling:** Support real-time updates for machine downtime and rush orders.
-*   [ ] **Analytics Dashboard:** Build interactive utilization heatmaps and tardiness charts.
-*   [ ] **WebSockets:** Implement real-time task progress tracking.
-*   [ ] **Dockerization:** Containerize backend, workers, and Next.js frontend.
-*   [ ] **ERP Integration:** Integrate standard ERP inputs and outputs.
+### Phase 3: Enterprise Features (Complete)
+*   [x] **Authentication:** JWT-based user authentication.
+*   [x] **PostgreSQL Migration:** Transition database backend to PostgreSQL (fully supported via DATABASE_URL and psycopg2-binary driver).
+*   [x] **Dynamic Rescheduling:** Support real-time updates for machine downtime and rush orders.
+*   [x] **Analytics Dashboard:** Build interactive utilization heatmaps and tardiness charts.
+*   [x] **WebSockets:** Implement real-time task progress tracking.
+*   [x] **Dockerization:** Containerize backend, workers, and Next.js frontend.
+*   [x] **ERP Integration:** Integrate standard ERP inputs and outputs (generic JSON/Excel/CSV import adapter layers).
 
 ---
 
