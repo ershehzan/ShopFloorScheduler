@@ -227,7 +227,9 @@ async function apiFetch<T>(
     try {
       const parsed = JSON.parse(errorBody);
       errorDetail = parsed.detail || errorBody;
-    } catch (_) {}
+    } catch {
+      // Ignore parsing errors
+    }
     throw new Error(errorDetail);
   }
 

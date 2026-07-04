@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import ProgressTracker, { ScheduleState } from "@/components/schedule/ProgressTracker";
-import { getStatus, StatusResponse } from "@/lib/api";
+import { getStatus, StatusResponse, getAccessToken } from "@/lib/api";
 
 export default function StatusPage({ params }: { params: Promise<{ taskId: string }> }) {
   const router = useRouter();
@@ -16,7 +16,12 @@ export default function StatusPage({ params }: { params: Promise<{ taskId: strin
     result: null,
   });
   const [apiError, setApiError] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep track of the latest status to read it from within the effect without triggers
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   // Resolve async params
   useEffect(() => {
@@ -58,8 +63,9 @@ export default function StatusPage({ params }: { params: Promise<{ taskId: strin
 
     const connectWebSocket = () => {
       try {
+        const token = getAccessToken();
         const wsUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
-          .replace(/^http/, "ws") + `/api/ws/tasks/${taskId}`;
+          .replace(/^http/, "ws") + `/api/ws/tasks/${taskId}${token ? `?token=${token}` : ""}`;
         
         console.log(`WS: Connecting to ${wsUrl}`);
         ws = new WebSocket(wsUrl);
@@ -111,7 +117,7 @@ export default function StatusPage({ params }: { params: Promise<{ taskId: strin
         ws.onclose = (event) => {
           console.log("WebSocket closed with code:", event.code);
           // If closed prematurely (not completed/error state), trigger polling
-          if (event.code !== 1000 && isMounted && status.state !== "complete" && status.state !== "error") {
+          if (event.code !== 1000 && isMounted && statusRef.current.state !== "complete" && statusRef.current.state !== "error") {
             startPolling();
           }
         };

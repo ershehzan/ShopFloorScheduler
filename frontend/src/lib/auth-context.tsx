@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   UserProfile,
@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
+    await Promise.resolve();
     if (getAccessToken()) {
       try {
         const profile = await getCurrentUserProfile();
@@ -42,10 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    loadUser();
+    const timer = setTimeout(() => {
+      loadUser();
+    }, 0);
 
     // Listen to token expiration events broadcasted by our fetch interceptor
     const handleAuthExpired = () => {
@@ -55,21 +58,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("sf_auth_expired", handleAuthExpired);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("sf_auth_expired", handleAuthExpired);
     };
-  }, []);
+  }, [loadUser, router]);
 
   // Protect dashboard routes
   useEffect(() => {
     if (!loading) {
-      const isPublicRoute = pathname === "/login";
+      const isPublicRoute = pathname === "/login" || pathname === "/register";
       if (!user && !isPublicRoute) {
         router.push("/login");
       } else if (user && isPublicRoute) {
         router.push("/dashboard");
       }
     }
-  }, [user, loading, pathname]);
+  }, [user, loading, pathname, router]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);

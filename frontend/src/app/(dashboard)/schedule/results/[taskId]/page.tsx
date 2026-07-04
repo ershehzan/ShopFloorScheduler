@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw, Loader2, AlertTriangle, Zap, Play, Plus, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, AlertTriangle, Zap, Play, Plus, Trash2 } from "lucide-react";
 import KPICards from "@/components/results/KPICards";
 import ExportButtons from "@/components/results/ExportButtons";
 import GanttChart from "@/components/gantt/GanttChart";

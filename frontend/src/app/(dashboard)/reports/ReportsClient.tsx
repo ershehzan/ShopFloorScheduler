@@ -6,9 +6,7 @@ import {
   FileText,
   Download,
   Loader2,
-  XCircle,
   Eye,
-  Clock,
 } from "lucide-react";
 import { getHistory, ScheduleRunSummary, resourceUrl } from "@/lib/api";
 
@@ -51,21 +49,25 @@ export default function ReportsClient() {
   const [error, setError] = useState("");
 
   const loadData = async () => {
+    await Promise.resolve();
     setLoading(true);
     setError("");
     try {
       const data = await getHistory({ status: "complete", page_size: 100 });
       setRuns(data.items);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Reports error:", err);
-      setError(err?.message || "Failed to load reports.");
+      setError(err instanceof Error ? err.message : "Failed to load reports.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {

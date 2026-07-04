@@ -19,7 +19,6 @@ import {
   Cpu,
   Clock,
   CheckCircle,
-  Grid,
 } from "lucide-react";
 import {
   getAnalyticsSummary,
@@ -44,6 +43,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState("");
 
   const fetchData = async () => {
+    await Promise.resolve();
     setLoading(true);
     setError("");
     try {
@@ -59,16 +59,19 @@ export default function AnalyticsPage() {
       setHeatmap(heat);
       setComparison(comp);
       setTardiness(tard);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || "Failed to fetch analytics data.");
+      setError(err instanceof Error ? err.message : "Failed to fetch analytics data.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {

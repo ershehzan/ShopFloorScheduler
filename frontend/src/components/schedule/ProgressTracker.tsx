@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
 
 export type ScheduleState = "pending" | "processing" | "complete" | "error";
@@ -28,8 +28,6 @@ interface ProgressTrackerProps {
 }
 
 export default function ProgressTracker({ state, message, taskId }: ProgressTrackerProps) {
-  const isComplete = state === "complete";
-  const isError = state === "error";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, FileText, Table } from "lucide-react";
+import { Download } from "lucide-react";
 import { resourceUrl } from "@/lib/api";
 
 interface ExportButtonsProps {
@@ -10,7 +10,7 @@ interface ExportButtonsProps {
   chartUrl: string | null;
 }
 
-export default function ExportButtons({ taskId, excelUrl, chartUrl }: ExportButtonsProps) {
+export default function ExportButtons({ excelUrl, chartUrl }: ExportButtonsProps) {
   const resolvedExcel = resourceUrl(excelUrl);
   const resolvedChart = resourceUrl(chartUrl);
 
@@ -19,23 +19,17 @@ export default function ExportButtons({ taskId, excelUrl, chartUrl }: ExportButt
       id: "export-excel-btn",
       label: "Excel Report",
       href: resolvedExcel,
-      icon: Table,
-      desc: "Full schedule data (.xlsx)",
-      color: "var(--success)",
     },
     {
       id: "export-gantt-btn",
       label: "Gantt Chart",
       href: resolvedChart,
-      icon: FileText,
-      desc: "PNG schedule visualization",
-      color: "var(--secondary)",
     },
   ];
 
   return (
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      {buttons.map(({ id, label, href, icon: Icon, desc, color }) =>
+      {buttons.map(({ id, label, href }) =>
         href ? (
           <a
             key={id}

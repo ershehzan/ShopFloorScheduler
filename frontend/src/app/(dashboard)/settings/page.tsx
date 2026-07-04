@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Settings } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings — ShopFloorScheduler",

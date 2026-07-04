@@ -195,7 +195,7 @@ export default function NewSchedulePage() {
               )}
             </button>
             <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center", marginTop: 8 }}>
-              You'll be redirected to a live status page
+              You&apos;ll be redirected to a live status page
             </p>
           </div>
         </div>

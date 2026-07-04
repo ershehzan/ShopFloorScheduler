@@ -107,6 +107,7 @@ export default function HistoryPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
+    await Promise.resolve();
     setLoading(true);
     setError(null);
     try {
@@ -127,7 +128,10 @@ export default function HistoryPage() {
   }, [page, algorithm, status]);
 
   useEffect(() => {
-    fetchHistory();
+    const timer = setTimeout(() => {
+      fetchHistory();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchHistory]);
 
   // Reset to page 1 when filters change

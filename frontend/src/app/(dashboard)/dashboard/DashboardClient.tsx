@@ -97,6 +97,7 @@ export default function DashboardClient() {
   const [error, setError] = useState("");
 
   const loadData = async () => {
+    await Promise.resolve();
     setLoading(true);
     setError("");
     try {
@@ -106,16 +107,19 @@ export default function DashboardClient() {
       ]);
       setSummary(sumData);
       setRecentRuns(histData.items);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Dashboard error:", err);
-      setError(err?.message || "Failed to load dashboard data.");
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {
