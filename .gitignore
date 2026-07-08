@@ -1,6 +1,7 @@
-﻿# Ignore the Python virtual environment
+# Ignore the Python virtual environment
 .venv/
 venv/
+node_modules/
 
 # Ignore Python's compiled files
 __pycache__/
@@ -11,11 +12,29 @@ __pycache__/
 # Ignore IDE settings
 .vscode/
 .idea/
+.next/
 
-# Ignore the output folder
-output/
-
-# CRITICAL: Ignore all credentials and sensitive files
+# CRITICAL: Ignore all credentials and sensitive environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 credentials.json
 
-*.json
+# Ignore database files
+*.db
+*.db.bak
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore user uploaded data and scheduling outputs
+uploads/
+output/
+
+# Ignore dynamically generated charts but preserve assets
+static/gantt_*.png
+static/chart_*.png
+
