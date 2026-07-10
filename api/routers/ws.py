@@ -116,6 +116,13 @@ class ConnectionManager:
 # Singleton instance — shared across the application
 manager = ConnectionManager()
 
+# Reference to the main running event loop (set during FastAPI startup)
+main_loop: Optional[asyncio.AbstractEventLoop] = None
+
+def set_main_loop(loop: asyncio.AbstractEventLoop):
+    global main_loop
+    main_loop = loop
+
 
 # ---------------------------------------------------------------------------
 # WebSocket endpoints
@@ -235,11 +242,15 @@ def send_task_progress_sync(task_id: str, data: dict):
     Thread-safe helper to push a task update from a background thread.
     Creates an event loop if needed (for use from non-async contexts).
     """
+    global main_loop
+    if main_loop and main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(manager.send_task_update(task_id, data), main_loop)
+        return
+
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            # Schedule the coroutine on the running loop
-            asyncio.ensure_future(manager.send_task_update(task_id, data))
+            asyncio.run_coroutine_threadsafe(manager.send_task_update(task_id, data), loop)
         else:
             loop.run_until_complete(manager.send_task_update(task_id, data))
     except RuntimeError:
@@ -256,10 +267,15 @@ def send_global_notification_sync(data: dict):
     """
     Thread-safe helper to broadcast a global notification from a background thread.
     """
+    global main_loop
+    if main_loop and main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(manager.broadcast_notification(data), main_loop)
+        return
+
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            asyncio.ensure_future(manager.broadcast_notification(data))
+            asyncio.run_coroutine_threadsafe(manager.broadcast_notification(data), loop)
         else:
             loop.run_until_complete(manager.broadcast_notification(data))
     except RuntimeError:

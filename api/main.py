@@ -75,6 +75,10 @@ app.include_router(ws.router)
 
 @app.on_event("startup")
 async def on_startup():
+    import asyncio
+    from api.routers.ws import set_main_loop
+    set_main_loop(asyncio.get_running_loop())
+
     from core.database import init_db
     init_db()  # Create SQLite tables if they don't exist (TASK-13)
     logger.info("ShopFloorScheduler API starting up (v2.0.0 — Phase 3).")
