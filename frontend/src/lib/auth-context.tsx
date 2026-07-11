@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import {
   UserProfile,
   login as apiLogin,
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiLogin(email, password);
       const profile = await getCurrentUserProfile();
       setUser(profile);
+      setLoading(false);
       router.push("/dashboard");
     } catch (err) {
       setUser(null);
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiLogin(email, password);
       const profile = await getCurrentUserProfile();
       setUser(profile);
+      setLoading(false);
       router.push("/dashboard");
     } catch (err) {
       setLoading(false);
@@ -115,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isPublicRoute = pathname === "/login" || pathname === "/register";
+
   return (
     <AuthContext.Provider
       value={{
@@ -126,7 +131,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
       }}
     >
-      {children}
+      {loading ? (
+        isPublicRoute ? (
+          children
+        ) : (
+          <div style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#090d16",
+            color: "#fff",
+          }}>
+            <Loader2 size={48} className="animate-spin text-accent" />
+          </div>
+        )
+      ) : (!user && !isPublicRoute) ? (
+        null
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }
