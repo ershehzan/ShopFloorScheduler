@@ -213,11 +213,21 @@ async function apiFetch<T>(
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
           localStorage.removeItem("user_profile");
-          window.location.href = "/login";
+          window.dispatchEvent(new Event("sf_auth_expired"));
         }
       } catch (refreshErr) {
         console.error("Auto refresh failed:", refreshErr);
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("user_profile");
+        window.dispatchEvent(new Event("sf_auth_expired"));
       }
+    } else {
+      // No refresh token available — clear auth and redirect to login
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_profile");
+      window.dispatchEvent(new Event("sf_auth_expired"));
     }
   }
 
