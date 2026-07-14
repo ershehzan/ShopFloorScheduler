@@ -25,6 +25,8 @@ from api.schemas import (
     ScheduleResultData,
     ScheduledOperationSchema,
     UtilizationSchema,
+    ComparisonRunResult,
+    ComparisonResultResponse,
 )
 from core.logger import logger
 from core.security import get_current_user
@@ -296,6 +298,343 @@ def _run_schedule_background(
             "task_id": task_id,
             "error": str(exc),
         })
+
+
+
+def _run_compare_background(
+    task_id: str,
+    filepath: str,
+    original_filename: str,
+    setup_time: int,
+    algorithms: list[str],
+    pop_size: int,
+    generations: int,
+    mutation_rate: float,
+    tournament_size: int,
+    w_makespan: float,
+    w_tardiness: float,
+):
+    """Run multiple scheduling algorithms side-by-side in a background thread."""
+    _update_run_status(task_id, "processing")
+    try:
+        from data_loader import load_data_from_excel
+        from scheduler.engine import ALGORITHM_MAP
+        from scheduler.metrics import build_full_metrics
+        from visualization import create_gantt_chart
+        from exporter import export_to_excel
+        from genetic_algorithm import run_genetic_algorithm
+        from core.database import SessionLocal
+        from core.models_db import ScheduleRun
+        from api.routers.ws import send_task_progress_sync, send_global_notification_sync
+
+        logger.info("Task {}: Loading data from {}", task_id, filepath)
+        machines, jobs = load_data_from_excel(filepath)
+
+        results = []
+        for i, algo in enumerate(algorithms):
+            logger.info("Task {}: Running {} ({}/{})", task_id, algo, i + 1, len(algorithms))
+            
+            # Send status update for current algorithm
+            send_task_progress_sync(task_id, {
+                "type": "progress",
+                "message": f"Running {algo} algorithm...",
+                "percent": round((i / len(algorithms)) * 100, 1),
+            })
+
+            if algo == "GA":
+                # Build WebSocket progress callback for GA
+                def _ws_progress(generation, total_generations, best_fitness):
+                    base_percent = (i / len(algorithms)) * 100
+                    ga_percent = (generation / total_generations) * (100 / len(algorithms))
+                    percent = round(base_percent + ga_percent, 1)
+                    send_task_progress_sync(task_id, {
+                        "type": "progress",
+                        "message": f"GA: Generation {generation}/{total_generations} (best makespan/fitness: {round(best_fitness, 2)})",
+                        "percent": percent,
+                    })
+
+                best_schedule = run_genetic_algorithm(
+                    jobs=jobs,
+                    machines=machines,
+                    setup_time=setup_time,
+                    pop_size=pop_size,
+                    num_gen=generations,
+                    mut_rate=mutation_rate,
+                    tourn_size=tournament_size,
+                    w_makespan=w_makespan,
+                    w_tardiness=w_tardiness,
+                    progress_callback=_ws_progress,
+                )
+            else:
+                fn = ALGORITHM_MAP.get(algo)
+                if fn is None:
+                    raise ValueError(f"Unknown algorithm: {algo}")
+                best_schedule = fn(jobs, machines, setup_time)
+
+            metrics = build_full_metrics(best_schedule, jobs, machines)
+
+            # Generate Gantt chart for this algorithm
+            chart_filename = f"gantt_{task_id}_{algo}.png"
+            chart_path = os.path.join("static", chart_filename)
+            try:
+                create_gantt_chart(best_schedule, f"{algo} Schedule", chart_path)
+                chart_url = f"/static/{chart_filename}"
+            except Exception as e:
+                logger.warning("Task {}: Gantt chart for {} failed: {}", task_id, algo, e)
+                chart_url = None
+
+            # Export Excel for this algorithm
+            excel_filename = f"schedule_{task_id}_{algo}.xlsx"
+            excel_path = os.path.join(OUTPUT_FOLDER, excel_filename)
+            try:
+                export_to_excel(best_schedule, jobs, excel_path)
+                excel_url = f"/api/schedule/download/{excel_filename}"
+            except Exception as e:
+                logger.warning("Task {}: Excel export for {} failed: {}", task_id, algo, e)
+                excel_url = None
+
+            schedule_list = [
+                {
+                    "job_id": op[0],
+                    "op_index": op[1],
+                    "machine_id": op[2],
+                    "start_time": op[3],
+                    "end_time": op[4],
+                }
+                for op in best_schedule
+            ]
+
+            utilization_list = [
+                {"machine_id": m_id, "utilization": util}
+                for m_id, util in metrics.get("utilization", {}).items()
+            ]
+
+            results.append({
+                "algorithm": algo,
+                "makespan": metrics.get("makespan", 0),
+                "total_tardiness": metrics.get("total_tardiness", 0),
+                "avg_flow_time": metrics.get("avg_flow_time", 0.0),
+                "on_time_percent": metrics.get("on_time_percent", 0.0),
+                "chart_url": chart_url,
+                "excel_url": excel_url,
+                "schedule": schedule_list,
+                "utilization": utilization_list,
+            })
+
+        # Save to DB
+        db = SessionLocal()
+        try:
+            run_row = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+            if run_row:
+                # Find the best run among compared runs (by makespan first, then tardiness)
+                best_run = min(results, key=lambda r: (r["makespan"], r["total_tardiness"]))
+                
+                run_row.status = "complete"
+                run_row.makespan = best_run["makespan"]
+                run_row.total_tardiness = best_run["total_tardiness"]
+                run_row.avg_flow_time = best_run["avg_flow_time"]
+                run_row.on_time_percent = best_run["on_time_percent"]
+                # Store the full comparison list in result_json
+                run_row.result_json = json.dumps({"results": results})
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+        logger.info("Task {}: Comparative optimization complete.", task_id)
+        send_task_progress_sync(task_id, {
+            "type": "complete",
+            "result": {"results": results},
+        })
+        send_global_notification_sync({
+            "type": "run_completed",
+            "task_id": task_id,
+            "algorithm": "COMPARE",
+            "makespan": best_run["makespan"],
+            "total_tardiness": best_run["total_tardiness"],
+        })
+    except Exception as e:
+        logger.exception("Task {}: Comparative run failed", task_id)
+        _update_run_status(task_id, "error", str(e))
+        send_task_progress_sync(task_id, {
+            "type": "error",
+            "message": str(e),
+        })
+        send_global_notification_sync({
+            "type": "run_failed",
+            "task_id": task_id,
+            "error": str(e),
+        })
+
+
+# ---------------------------------------------------------------------------
+# POST /api/schedule/compare
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/compare",
+    response_model=UploadResponse,
+    status_code=202,
+    summary="Upload production data and run comparative scheduling across multiple algorithms",
+)
+async def upload_and_compare(
+    file: UploadFile = File(...),
+    setup_time: int = Form(default=2, ge=0, le=60),
+    algorithms: str = Form(default="GA,FCFS,SPT,EDD,WSPT"),
+    pop_size: int = Form(default=30, ge=5, le=500),
+    generations: int = Form(default=50, ge=5, le=2000),
+    mutation_rate: float = Form(default=0.1, ge=0.0, le=1.0),
+    tournament_size: int = Form(default=3, ge=2, le=20),
+    w_makespan: float = Form(default=0.6, ge=0.0, le=1.0),
+    w_tardiness: float = Form(default=0.4, ge=0.0, le=1.0),
+    current_user=Depends(get_current_user),
+) -> UploadResponse:
+    # Validate file type
+    if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported.")
+
+    # Validate algorithms
+    algo_list = [a.strip().upper() for a in algorithms.split(",") if a.strip()]
+    allowed_algorithms = {"GA", "FCFS", "SPT", "EDD", "WSPT"}
+    for algo in algo_list:
+        if algo not in allowed_algorithms:
+            raise HTTPException(status_code=422, detail=f"Algorithm '{algo}' must be one of {allowed_algorithms}")
+
+    if not algo_list:
+        raise HTTPException(status_code=400, detail="At least one algorithm must be specified.")
+
+    # Save uploaded file
+    task_id = str(uuid.uuid4())
+    original_filename = file.filename
+    filepath = os.path.join(UPLOAD_FOLDER, f"{task_id}.xlsx")
+    try:
+        contents = await file.read()
+        with open(filepath, "wb") as f:
+            f.write(contents)
+    except Exception as e:
+        logger.error("Failed to save uploaded file: {}", str(e))
+        raise HTTPException(status_code=500, detail="Failed to save uploaded file.")
+
+    logger.info("File uploaded for comparison task {}. Algorithms: {}", task_id, algo_list)
+
+    # Create initial DB row (status = pending, algorithm = COMPARE)
+    try:
+        from core.database import SessionLocal
+        from core.models_db import ScheduleRun
+        db = SessionLocal()
+        db.add(ScheduleRun(
+            task_id=task_id,
+            status="pending",
+            algorithm="COMPARE",
+            file_name=original_filename,
+            user_id=current_user.id,
+            trigger_type="initial",
+        ))
+        db.commit()
+        db.close()
+    except Exception as db_err:
+        logger.warning("Task {}: Could not create DB row — {}", task_id, str(db_err))
+
+    # Run in background thread
+    thread = threading.Thread(
+        target=_run_compare_background,
+        kwargs={
+            "task_id": task_id,
+            "filepath": filepath,
+            "original_filename": original_filename,
+            "setup_time": setup_time,
+            "algorithms": algo_list,
+            "pop_size": pop_size,
+            "generations": generations,
+            "mutation_rate": mutation_rate,
+            "tournament_size": tournament_size,
+            "w_makespan": w_makespan,
+            "w_tardiness": w_tardiness,
+        },
+        daemon=True,
+    )
+    thread.start()
+
+    return UploadResponse(
+        task_id=task_id,
+        message="Comparative schedule optimization started.",
+        status_url=f"/api/schedule/compare/status/{task_id}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/schedule/compare/status/{task_id}
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/compare/status/{task_id}",
+    response_model=ComparisonResultResponse,
+    summary="Poll comparison task status",
+)
+async def get_compare_status(
+    task_id: str,
+    current_user=Depends(get_current_user),
+) -> ComparisonResultResponse:
+    run = _get_run(task_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found.")
+
+    # Ownership check
+    if run.get("user_id") is not None:
+        if not current_user.is_admin and current_user.id != run["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
+
+    results_data = None
+    if run["status"] == "complete" and run.get("result_json"):
+        try:
+            raw_result = json.loads(run["result_json"])
+            results_data = [
+                ComparisonRunResult(
+                    algorithm=r["algorithm"],
+                    makespan=r["makespan"],
+                    total_tardiness=r["total_tardiness"],
+                    avg_flow_time=r["avg_flow_time"],
+                    on_time_percent=r["on_time_percent"],
+                    chart_url=r.get("chart_url"),
+                    excel_url=r.get("excel_url"),
+                    schedule=[ScheduledOperationSchema(**op) for op in r.get("schedule", [])],
+                    utilization=[UtilizationSchema(**u) for u in r.get("utilization", [])],
+                )
+                for r in raw_result.get("results", [])
+            ]
+        except Exception as e:
+            logger.exception("Task {}: Could not deserialize result_json for comparison status", task_id)
+
+    return ComparisonResultResponse(
+        task_id=task_id,
+        state=run["status"],
+        message=run.get("error_message") or "",
+        results=results_data,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/schedule/compare/results/{task_id}
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/compare/results/{task_id}",
+    response_model=ComparisonResultResponse,
+    summary="Get full comparative results",
+)
+async def get_compare_results(
+    task_id: str,
+    current_user=Depends(get_current_user),
+) -> ComparisonResultResponse:
+    res = await get_compare_status(task_id, current_user)
+    if res.state != "complete":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Results not available yet. Task state: {res.state}",
+        )
+    return res
 
 
 # ---------------------------------------------------------------------------

@@ -123,6 +123,27 @@ export interface TrendsResponse {
   total: number;
 }
 
+// Comparison Types (Phase 4 / New Work)
+export interface ComparisonRunResult {
+  algorithm: string;
+  makespan: number;
+  total_tardiness: number;
+  avg_flow_time: number;
+  on_time_percent: number;
+  chart_url: string | null;
+  excel_url: string | null;
+  schedule: ScheduledOperation[];
+  utilization: UtilizationEntry[];
+}
+
+export interface ComparisonResultResponse {
+  task_id: string;
+  state: "pending" | "processing" | "complete" | "error";
+  message: string;
+  results: ComparisonRunResult[] | null;
+}
+
+
 export interface HeatmapCell {
   task_id: string;
   machine_id: number;
@@ -311,6 +332,42 @@ export async function getHistory(params: {
   if (params.status) query.set("status", params.status);
   const qs = query.toString();
   return apiFetch<HistoryResponse>(`/api/history${qs ? "?" + qs : ""}`);
+}
+
+// ─── Phase 4: Comparative Optimization API Endpoints ─────────────────────────
+
+/** POST /api/schedule/compare */
+export async function runComparison(
+  file: File,
+  params: {
+    setup_time?: number;
+    algorithms?: string;
+    pop_size?: number;
+    generations?: number;
+    mutation_rate?: number;
+    w_makespan?: number;
+    w_tardiness?: number;
+  }
+): Promise<UploadResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined) form.append(k, String(v));
+  });
+  return apiFetch<UploadResponse>("/api/schedule/compare", {
+    method: "POST",
+    body: form,
+  });
+}
+
+/** GET /api/schedule/compare/status/{taskId} */
+export async function getCompareStatus(taskId: string): Promise<ComparisonResultResponse> {
+  return apiFetch<ComparisonResultResponse>(`/api/schedule/compare/status/${taskId}`);
+}
+
+/** GET /api/schedule/compare/results/{taskId} */
+export async function getCompareResults(taskId: string): Promise<ComparisonResultResponse> {
+  return apiFetch<ComparisonResultResponse>(`/api/schedule/compare/results/${taskId}`);
 }
 
 // ─── Phase 3: Rescheduling API Endpoints ─────────────────────────────────────

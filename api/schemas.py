@@ -370,3 +370,34 @@ class RushOrderRequest(BaseModel):
     rush_job: RushJobSchema = Field(..., description="The rush job to inject.")
 
 
+# ---------------------------------------------------------------------------
+# Comparison schemas (Phase 4 / New Work)
+# ---------------------------------------------------------------------------
+
+class ComparisonRunResult(BaseModel):
+    """Result summary for a single algorithm run within a comparative analysis."""
+
+    algorithm: str
+    makespan: int
+    total_tardiness: int
+    avg_flow_time: float
+    on_time_percent: float
+    schedule: list[ScheduledOperationSchema] = Field(default_factory=list)
+    utilization: list[UtilizationSchema] = Field(default_factory=list)
+    chart_url: Optional[str] = None
+    excel_url: Optional[str] = None
+
+
+class ComparisonResultResponse(BaseModel):
+    """Response containing side-by-side results for multiple compared algorithms."""
+
+    task_id: str
+    state: str = Field(..., description="One of: pending, processing, complete, error.")
+    message: str = Field(default="")
+    results: Optional[list[ComparisonRunResult]] = Field(
+        None,
+        description="Populated with all run results when state == 'complete'.",
+    )
+
+
+
