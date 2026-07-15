@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw, Loader2, AlertTriangle, Zap, Play, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, AlertTriangle, Zap, Play, Plus, Trash2, Download, Info, SlidersHorizontal } from "lucide-react";
 import KPICards from "@/components/results/KPICards";
 import ExportButtons from "@/components/results/ExportButtons";
 import GanttChart from "@/components/gantt/GanttChart";
-import { getResults, StatusResponse, rescheduleBreakdown, rescheduleRushOrder } from "@/lib/api";
+import { getResults, StatusResponse, rescheduleBreakdown, rescheduleRushOrder, getCompareResults, ComparisonRunResult, resourceUrl } from "@/lib/api";
+import ComparisonChart from "@/components/analytics/ComparisonChart";
 
 export default function ResultsPage({ params }: { params: Promise<{ taskId: string }> }) {
   const router = useRouter();
@@ -14,6 +15,12 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
   const [data, setData] = useState<StatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Comparison results states
+  const [compareResults, setCompareResults] = useState<ComparisonRunResult[] | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
+  const [activeGanttAlgo, setActiveGanttAlgo] = useState<string>("");
 
   useEffect(() => {
     params.then((p) => setTaskId(p.taskId));
@@ -31,6 +38,29 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
         setLoading(false);
       });
   }, [taskId]);
+
+  useEffect(() => {
+    if (!taskId || !data?.result || data.result.algorithm !== "COMPARE") return;
+
+    setCompareLoading(true);
+    setCompareError(null);
+    getCompareResults(taskId)
+      .then((res) => {
+        if (res.results) {
+          setCompareResults(res.results);
+          // Set the best algorithm as active by default
+          const best = res.results.reduce((prev, current) =>
+            prev.makespan < current.makespan ? prev : current
+          );
+          setActiveGanttAlgo(best.algorithm);
+        }
+        setCompareLoading(false);
+      })
+      .catch((err) => {
+        setCompareError(err instanceof Error ? err.message : "Failed to load comparison results.");
+        setCompareLoading(false);
+      });
+  }, [taskId, data]);
 
   // Rescheduling states
   const [activeTab, setActiveTab] = useState<"breakdown" | "rush">("breakdown");
@@ -159,6 +189,11 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
 
   const result = data.result;
 
+  const activeRun = compareResults?.find((r) => r.algorithm === activeGanttAlgo);
+  const displaySchedule = activeRun ? activeRun.schedule : result.schedule;
+  const displayMakespan = activeRun ? activeRun.makespan : result.makespan;
+  const displayUtilization = activeRun ? activeRun.utilization : result.utilization;
+
   return (
     <div className="animate-fade-in" style={{ maxWidth: 1280 }}>
       {/* Header */}
@@ -227,25 +262,176 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
         />
       </div>
 
+      {/* Comparative Dashboard (only for COMPARE algorithm runs) */}
+      {result.algorithm === "COMPARE" && compareResults && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24, marginBottom: 24 }}>
+          {/* Quick Summary Grid */}
+          <div className="card" style={{ padding: 24 }}>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+              <SlidersHorizontal size={18} />
+              Comparative Summary Metrics
+            </h2>
+            
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
+                    {["Algorithm", "Makespan (units)", "Total Tardiness (units)", "Avg Flow Time", "On-Time Ratio", "Actions"].map((col) => (
+                      <th key={col} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--text-secondary)" }}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareResults.map((r, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "12px 16px", fontWeight: 700, color: "var(--secondary)" }}>{r.algorithm}</td>
+                      <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{r.makespan}</td>
+                      <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{r.total_tardiness}</td>
+                      <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{r.avg_flow_time.toFixed(1)}</td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 8px",
+                          borderRadius: 99,
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          background: r.on_time_percent >= 80 ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)",
+                          color: r.on_time_percent >= 80 ? "var(--success)" : "var(--warning)",
+                        }}>
+                          {r.on_time_percent.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {r.excel_url && (
+                            <a
+                              href={resourceUrl(r.excel_url) || "#"}
+                              download
+                              className="btn btn-secondary btn-sm"
+                              style={{ height: 28, fontSize: "0.75rem", padding: "0 8px", gap: 4 }}
+                            >
+                              <Download size={10} />
+                              Excel
+                            </a>
+                          )}
+                          <button
+                            onClick={() => setActiveGanttAlgo(r.algorithm)}
+                            className={`btn btn-sm ${activeGanttAlgo === r.algorithm ? "btn-primary" : "btn-ghost"}`}
+                            style={{ height: 28, fontSize: "0.75rem", padding: "0 8px" }}
+                          >
+                            Show Gantt
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Visual Performance Charts & Insights */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+            
+            {/* Recharts chart */}
+            <div className="card" style={{ padding: 24 }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 16 }}>Side-by-Side Performance Comparison</h3>
+              <ComparisonChart data={compareResults} />
+            </div>
+
+            {/* Quick insights card */}
+            <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                <Info size={16} style={{ color: "var(--secondary)" }} />
+                Scheduler Intelligence Insights
+              </h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, justifyContent: "center" }}>
+                {(() => {
+                  const bestMakespan = compareResults.reduce((prev, current) => 
+                    (prev.makespan < current.makespan) ? prev : current
+                  );
+                  const bestTardiness = compareResults.reduce((prev, current) => 
+                    (prev.total_tardiness < current.total_tardiness) ? prev : current
+                  );
+
+                  return (
+                    <>
+                      <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: "var(--radius-md)" }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>MINIMUM MAKESPAN</span>
+                        <p style={{ fontSize: "1.125rem", fontWeight: 700, margin: "2px 0 4px", color: "var(--success)" }}>
+                          {bestMakespan.algorithm} ({bestMakespan.makespan} units)
+                        </p>
+                        <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                          Achieves the fastest overall completion for the shop floor layout.
+                        </p>
+                      </div>
+
+                      <div style={{ background: "rgba(255,255,255,0.02)", padding: 14, borderRadius: "var(--radius-md)" }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>LOWEST JOB TARDINESS</span>
+                        <p style={{ fontSize: "1.125rem", fontWeight: 700, margin: "2px 0 4px", color: "var(--accent)" }}>
+                          {bestTardiness.algorithm} ({bestTardiness.total_tardiness} delay units)
+                        </p>
+                        <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+                          Minimizes missed customer deadlines and priority penalties.
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Gantt Chart */}
-      {result.schedule.length > 0 && (
+      {displaySchedule.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 4 }}>
-            Interactive Gantt Chart
-          </h2>
-          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: 20 }}>
-            Hover over operations for details. Use zoom controls to adjust the time axis.
-          </p>
-          <GanttChart schedule={result.schedule} makespan={result.makespan} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 4 }}>
+                Interactive Gantt Chart
+              </h2>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+                {result.algorithm === "COMPARE" ? (
+                  <>Visual schedule generated by the <strong style={{ color: "var(--secondary)" }}>{activeGanttAlgo}</strong> algorithm.</>
+                ) : (
+                  <>Hover over operations for details. Use zoom controls to adjust the time axis.</>
+                )}
+              </p>
+            </div>
+            
+            {/* Dropdown switcher for COMPARE runs */}
+            {result.algorithm === "COMPARE" && compareResults && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>Visualize:</span>
+                <select
+                  value={activeGanttAlgo}
+                  onChange={e => setActiveGanttAlgo(e.target.value)}
+                  className="input"
+                  style={{ height: 32, padding: "0 10px", background: "var(--bg-secondary)", fontSize: "0.875rem", width: 140 }}
+                >
+                  {compareResults.map(r => (
+                    <option key={r.algorithm} value={r.algorithm}>{r.algorithm}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <GanttChart schedule={displaySchedule} makespan={displayMakespan} />
         </div>
       )}
 
       {/* Machine Utilization */}
-      {result.utilization.length > 0 && (
+      {displayUtilization.length > 0 && (
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 16 }}>Machine Utilization</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {result.utilization
+            {displayUtilization
               .slice()
               .sort((a, b) => b.utilization - a.utilization)
               .map(({ machine_id, utilization }) => (
@@ -295,7 +481,7 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
       )}
 
       {/* Dynamic Rescheduling Section */}
-      {result.schedule.length > 0 && (
+      {result.algorithm !== "COMPARE" && result.schedule.length > 0 && (
         <div className="card" style={{ marginBottom: 24, padding: 24 }}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
             <RefreshCw size={18} className="animate-spin-slow" />
@@ -558,7 +744,7 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
       )}
 
       {/* Operation Table */}
-      {result.schedule.length > 0 && (
+      {displaySchedule.length > 0 && (
         <div className="card">
           <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 16 }}>Schedule Operations</h2>
           <div style={{ overflowX: "auto" }}>
@@ -590,7 +776,7 @@ export default function ResultsPage({ params }: { params: Promise<{ taskId: stri
                 </tr>
               </thead>
               <tbody>
-                {result.schedule
+                {displaySchedule
                   .slice()
                   .sort((a, b) => a.start_time - b.start_time)
                   .map((op, idx) => (

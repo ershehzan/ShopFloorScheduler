@@ -94,6 +94,17 @@ class TestCompareAPI:
         assert results_data["state"] == "complete"
         assert len(results_data["results"]) == 2
 
+        # 4. Fetch regular results endpoint (should return best run metrics and schedule)
+        reg_resp = client.get(f"/api/schedule/results/{task_id}", headers=auth_headers)
+        assert reg_resp.status_code == 200
+        reg_data = reg_resp.json()
+        assert reg_data["state"] == "complete"
+        assert reg_data["result"] is not None
+        assert reg_data["result"]["algorithm"] == "COMPARE"
+        assert reg_data["result"]["makespan"] > 0
+        assert len(reg_data["result"]["schedule"]) > 0
+        assert len(reg_data["result"]["utilization"]) > 0
+
     def test_unknown_task_returns_404(self, client, auth_headers):
         """Poll status for an unknown task ID should return 404."""
         response = client.get("/api/schedule/compare/status/nonexistent-uuid", headers=auth_headers)

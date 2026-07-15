@@ -849,6 +849,21 @@ async def download_file(
 # ---------------------------------------------------------------------------
 
 def _build_result(data: dict) -> ScheduleResultData:
+    if "results" in data and isinstance(data["results"], list) and len(data["results"]) > 0:
+        # Find the best run among compared runs (by makespan first, then tardiness)
+        best_run = min(data["results"], key=lambda r: (r.get("makespan", 0), r.get("total_tardiness", 0)))
+        return ScheduleResultData(
+            makespan=best_run.get("makespan", 0),
+            total_tardiness=best_run.get("total_tardiness", 0),
+            avg_flow_time=best_run.get("avg_flow_time", 0.0),
+            on_time_percent=best_run.get("on_time_percent", 0.0),
+            algorithm="COMPARE",
+            chart_url=best_run.get("chart_url"),
+            excel_url=best_run.get("excel_url"),
+            schedule=[ScheduledOperationSchema(**op) for op in best_run.get("schedule", [])],
+            utilization=[UtilizationSchema(**u) for u in best_run.get("utilization", [])],
+        )
+
     return ScheduleResultData(
         makespan=data.get("makespan", 0),
         total_tardiness=data.get("total_tardiness", 0),
