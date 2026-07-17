@@ -15,6 +15,7 @@ import json
 import os
 import uuid
 import threading
+import copy
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 from fastapi.responses import FileResponse
@@ -341,6 +342,10 @@ def _run_compare_background(
                 "percent": round((i / len(algorithms)) * 100, 1),
             })
 
+            # Create a deep copy of the machines list so that state mutations
+            # (available_at, last_job_id) do not leak between algorithm runs.
+            algo_machines = copy.deepcopy(machines)
+
             if algo == "GA":
                 # Build WebSocket progress callback for GA
                 def _ws_progress(generation, total_generations, best_fitness):
@@ -355,7 +360,7 @@ def _run_compare_background(
 
                 best_schedule = run_genetic_algorithm(
                     jobs=jobs,
-                    machines=machines,
+                    machines=algo_machines,
                     setup_time=setup_time,
                     pop_size=pop_size,
                     num_gen=generations,
@@ -369,9 +374,9 @@ def _run_compare_background(
                 fn = ALGORITHM_MAP.get(algo)
                 if fn is None:
                     raise ValueError(f"Unknown algorithm: {algo}")
-                best_schedule = fn(jobs, machines, setup_time)
+                best_schedule = fn(jobs, algo_machines, setup_time)
 
-            metrics = build_full_metrics(best_schedule, jobs, machines)
+            metrics = build_full_metrics(best_schedule, jobs, algo_machines)
 
             # Generate Gantt chart for this algorithm
             chart_filename = f"gantt_{task_id}_{algo}.png"

@@ -70,7 +70,15 @@ class TestCompareAPI:
                 assert status_data["results"] is not None
                 assert len(status_data["results"]) == 2
                 
-                # Check metrics structure
+                # Check metrics structure and ensure runs are isolated (no machine available_at leakage)
+                results_by_algo = {r["algorithm"]: r for r in status_data["results"]}
+                assert "FCFS" in results_by_algo
+                assert "SPT" in results_by_algo
+                
+                fcfs_makespan = results_by_algo["FCFS"]["makespan"]
+                spt_makespan = results_by_algo["SPT"]["makespan"]
+                assert spt_makespan < 300, f"SPT makespan was abnormally high: {spt_makespan} (possible state leakage)"
+
                 for run_res in status_data["results"]:
                     assert "algorithm" in run_res
                     assert run_res["algorithm"] in ["FCFS", "SPT"]
