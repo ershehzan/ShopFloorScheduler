@@ -439,6 +439,13 @@ The roadmap has been planned in distinct implementation phases:
 *   [x] **Dockerization:** Containerize backend, workers, and Next.js frontend.
 *   [x] **ERP Integration:** Integrate standard ERP inputs and outputs (generic JSON/Excel/CSV import adapter layers).
 
+### Phase 4: Advanced Intelligence Features (Complete)
+*   [x] **Predictive Maintenance:** Isolation Forest anomaly detection on synthetic sensor telemetry. `ml/predictive_maintenance.py` module with `SensorSimulator` + `MaintenancePredictor`. New REST endpoints under `/api/maintenance/`. Two new DB tables: `machine_health` and `maintenance_alerts`.
+*   [x] **Reinforcement Learning Optimizer:** Pure-Python tabular Q-learning agent (`rl/environment.py` + `rl/q_agent.py`). Background training API under `/api/rl/`. `algorithm=RL` now supported in the schedule upload endpoint.
+*   [x] **Digital Twin Simulation:** Discrete-event simulator (`twin/simulator.py`) replaying schedules in virtual time over WebSocket. REST control API under `/api/twin/`. Supports mid-simulation disruption injection (breakdowns, rush orders).
+*   [x] **Frontend Dashboards:** Three new premium pages: Predictive Maintenance (health rings + sparklines + alerts), RL Optimizer (training config + reward chart), Digital Twin (animated Gantt replay + event log).
+
+
 ---
 
 # AI Agent Instructions

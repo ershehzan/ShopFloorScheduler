@@ -16,6 +16,9 @@ import {
   Factory,
   History,
   LogOut,
+  ShieldAlert,
+  BrainCircuit,
+  Cpu,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -26,6 +29,12 @@ const NAV_ITEMS = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const PHASE4_NAV_ITEMS = [
+  { href: "/maintenance", label: "Maintenance", icon: ShieldAlert },
+  { href: "/rl-optimizer", label: "RL Optimizer", icon: BrainCircuit },
+  { href: "/digital-twin", label: "Digital Twin", icon: Cpu },
 ];
 
 interface SidebarProps {
@@ -171,7 +180,56 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* Phase 4: AI Features section */}
+        <div style={{ height: 1, background: "var(--border)", margin: "12px 0" }} />
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.08em", padding: "6px 12px 6px", textTransform: "uppercase", display: collapsed ? "none" : "block" }}>
+          AI Features
+        </div>
+        {PHASE4_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              title={collapsed ? label : undefined}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: collapsed ? "10px 0" : "10px 12px",
+                justifyContent: collapsed ? "center" : "flex-start",
+                borderRadius: "var(--radius-md)",
+                margin: "2px 0",
+                textDecoration: "none",
+                color: active ? "var(--accent)" : "var(--text-secondary)",
+                background: active ? "rgba(139, 92, 246, 0.08)" : "transparent",
+                fontWeight: active ? 600 : 400,
+                fontSize: "0.9375rem",
+                transition: "all var(--transition-fast)",
+                position: "relative",
+              }}
+            >
+              {active && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: "20%",
+                    bottom: "20%",
+                    width: 3,
+                    borderRadius: "0 99px 99px 0",
+                    background: "var(--accent)",
+                  }}
+                />
+              )}
+              <Icon size={18} />
+              {!collapsed && <span>{label}</span>}
+            </Link>
+          );
+        })}
       </nav>
+
 
       {/* User profile and logout */}
       <div

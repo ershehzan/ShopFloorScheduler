@@ -156,6 +156,16 @@ def _run_schedule_background(
                 w_tardiness=w_tardiness,
                 progress_callback=_ws_progress,
             )
+        elif algorithm == "RL":
+            from rl.rl_scheduler import run_rl_schedule
+            send_task_progress_sync(task_id, {"type": "progress", "percent": 0, "message": "RL scheduler loading model..."})
+            best_schedule = run_rl_schedule(
+                jobs=jobs,
+                machines=machines,
+                setup_time=setup_time,
+                lambda_tardiness=w_tardiness,
+            )
+            send_task_progress_sync(task_id, {"type": "progress", "percent": 100, "message": "RL schedule complete."})
         else:
             fn = ALGORITHM_MAP.get(algorithm)
             if fn is None:
