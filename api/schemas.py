@@ -569,3 +569,160 @@ class TwinInjectRequest(BaseModel):
     machine_id: Optional[str] = Field(None, description="Target machine (for breakdown).")
     at_time: Optional[float] = Field(None, ge=0.0, description="Virtual time to inject breakdown.")
     rush_job: Optional[dict] = Field(None, description="Rush job spec (for rush_order type).")
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Shift Scheduling schemas
+# ---------------------------------------------------------------------------
+
+class MachineShiftIn(BaseModel):
+    """Request body for creating or updating a machine shift window."""
+
+    machine_id: str = Field(..., description="Machine identifier (e.g. '1' or 'M1').")
+    shift_name: str = Field(
+        ...,
+        description="Shift label: DAY, EVENING, NIGHT, or a custom name.",
+        min_length=1, max_length=50,
+    )
+    shift_start: float = Field(
+        ..., ge=0.0, description="Shift window start (time-unit offset within cycle, e.g. 6.0)."
+    )
+    shift_end: float = Field(
+        ..., ge=0.0, description="Shift window end (time-unit offset within cycle, e.g. 14.0)."
+    )
+    cycle_length: float = Field(
+        default=24.0,
+        ge=1.0,
+        description="Cycle period after which the shift repeats (default 24 time-units = 1 day).",
+    )
+    is_active: bool = Field(default=True, description="Whether this shift is currently active.")
+
+    @field_validator("shift_end")
+    @classmethod
+    def end_after_start(cls, v: float, info) -> float:
+        start = info.data.get("shift_start", 0.0)
+        if v <= start:
+            raise ValueError("shift_end must be greater than shift_start.")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "machine_id": "1",
+                "shift_name": "DAY",
+                "shift_start": 6.0,
+                "shift_end": 14.0,
+                "cycle_length": 24.0,
+                "is_active": True,
+            }
+        }
+    }
+
+
+class MachineShiftOut(BaseModel):
+    """Shift window configuration record."""
+
+    id: int
+    machine_id: str
+    shift_name: str
+    shift_start: float
+    shift_end: float
+    cycle_length: float
+    is_active: bool
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Manual Gantt Edit schemas
+# ---------------------------------------------------------------------------
+
+class ManualOperationIn(BaseModel):
+    """A manually repositioned operation in the Gantt editor."""
+
+    job_id: int = Field(..., ge=1)
+    op_index: int = Field(..., ge=0)
+    machine_id: int = Field(..., ge=0)
+    start_time: float = Field(..., ge=0.0)
+    end_time: float = Field(..., ge=0.0)
+
+    @field_validator("end_time")
+    @classmethod
+    def end_after_start(cls, v: float, info) -> float:
+        start = info.data.get("start_time", 0.0)
+        if v <= start:
+            raise ValueError("end_time must be after start_time.")
+        return v
+
+
+class ManualSchedulePatch(BaseModel):
+    """Request body to commit a manually edited schedule."""
+
+    schedule: list[ManualOperationIn] = Field(
+        ..., min_length=1, description="Full adjusted operation list."
+    )
+
+
+class ManualScheduleResult(BaseModel):
+    """Result after applying a manual schedule edit."""
+
+    task_id: str
+    makespan: float
+    total_tardiness: float
+    avg_flow_time: float
+    on_time_percent: float
+    conflicts: list[str] = Field(
+        default_factory=list,
+        description="List of detected constraint violations (non-fatal warnings).",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Natural Language Assistant schemas
+# ---------------------------------------------------------------------------
+
+class AssistantMessage(BaseModel):
+    """A single message in the conversation history."""
+
+    role: str = Field(..., description="'user' or 'assistant'.")
+    content: str = Field(..., description="Message text.")
+
+
+class AssistantChatRequest(BaseModel):
+    """Request body for the assistant chat endpoint."""
+
+    message: str = Field(..., description="User's natural language query.", min_length=1, max_length=2000)
+    history: list[AssistantMessage] = Field(
+        default_factory=list,
+        description="Previous messages for multi-turn context (up to 10).",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "message": "What's the makespan of my latest run?",
+                "history": [],
+            }
+        }
+    }
+
+
+class AssistantToolCall(BaseModel):
+    """A tool/function call made by the assistant."""
+
+    tool_name: str
+    arguments: dict = Field(default_factory=dict)
+    result_summary: str = Field(default="", description="Human-readable summary of the tool result.")
+
+
+class AssistantChatResponse(BaseModel):
+    """Response from the assistant chat endpoint."""
+
+    reply: str = Field(..., description="Assistant's natural language response.")
+    tool_calls: list[AssistantToolCall] = Field(
+        default_factory=list,
+        description="Tool calls made to answer the query (shown in the UI for transparency).",
+    )
+    suggested_prompts: list[str] = Field(
+        default_factory=list,
+        description="Follow-up question suggestions.",
+    )

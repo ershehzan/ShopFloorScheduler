@@ -28,6 +28,8 @@ from api.schemas import (
     UtilizationSchema,
     ComparisonRunResult,
     ComparisonResultResponse,
+    ManualSchedulePatch,
+    ManualScheduleResult,
 )
 from core.logger import logger
 from core.security import get_current_user
@@ -890,3 +892,201 @@ def _build_result(data: dict) -> ScheduleResultData:
         schedule=[ScheduledOperationSchema(**op) for op in data.get("schedule", [])],
         utilization=[UtilizationSchema(**u) for u in data.get("utilization", [])],
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — PDF report download
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/pdf/{task_id}",
+    summary="Download PDF report for a completed run (Phase 5)",
+    tags=["Scheduling"],
+)
+def download_pdf(
+    task_id: str,
+    current_user=Depends(get_current_user),
+):
+    """
+    Generate (or retrieve cached) a PDF report for a completed schedule run
+    and return it as a file download.
+    """
+    from pdf_exporter import generate_pdf_from_db
+
+    pdf_path_candidate = os.path.join(OUTPUT_FOLDER, f"report_{task_id[:8]}.pdf")
+
+    # Use cached PDF if it already exists
+    if not os.path.exists(pdf_path_candidate):
+        try:
+            generate_pdf_from_db(task_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    if not os.path.exists(pdf_path_candidate):
+        raise HTTPException(status_code=500, detail="PDF generation failed.")
+
+    return FileResponse(
+        path=pdf_path_candidate,
+        filename=f"schedule_report_{task_id[:8]}.pdf",
+        media_type="application/pdf",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — Manual Gantt editor PATCH
+# ---------------------------------------------------------------------------
+
+@router.patch(
+    "/{task_id}/manual",
+    summary="Commit a manually edited schedule (Phase 5)",
+    tags=["Scheduling"],
+)
+def patch_manual_schedule(
+    task_id: str,
+    body: ManualSchedulePatch,
+    current_user=Depends(get_current_user),
+):
+    """
+    Accept a manually adjusted schedule (dragged in the Gantt editor),
+    validate it for conflicts, recompute metrics, and persist the updated result.
+
+    Returns the new KPI metrics and a list of any constraint warnings.
+    """
+    from scheduler.metrics import (
+        calculate_makespan as compute_makespan,
+        calculate_tardiness,
+        calculate_avg_flow_time,
+        calculate_on_time_percent,
+        calculate_utilization,
+    )
+    from core.database import SessionLocal
+    from core.models_db import ScheduleRun, JobRecord, OperationRecord
+    import json
+
+    run = _get_run(task_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    if run.get("status") != "complete":
+        raise HTTPException(status_code=409, detail="Can only edit completed runs.")
+    if run.get("user_id") and not current_user.is_admin and current_user.id != run["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    # Re-parse body in case it's passed as dict
+    if not isinstance(body, ManualSchedulePatch):
+        body = ManualSchedulePatch(**body)
+
+    ops = body.schedule
+    schedule_tuples = [(o.job_id, o.op_index, o.machine_id, o.start_time, o.end_time) for o in ops]
+
+    # --- Conflict detection ---
+    conflicts: list[str] = []
+    from collections import defaultdict
+    by_machine: dict[int, list[tuple]] = defaultdict(list)
+    for jid, oi, mid, st, et in schedule_tuples:
+        by_machine[mid].append((st, et, jid, oi))
+
+    for mid, intervals in by_machine.items():
+        intervals.sort()
+        for i in range(1, len(intervals)):
+            if intervals[i][0] < intervals[i - 1][1]:
+                conflicts.append(
+                    f"Overlap on Machine {mid}: "
+                    f"Job {intervals[i-1][2]} op {intervals[i-1][3]+1} ends at {intervals[i-1][1]:.0f}, "
+                    f"Job {intervals[i][2]} op {intervals[i][3]+1} starts at {intervals[i][0]:.0f}"
+                )
+
+    # --- Recompute metrics ---
+    result_json_orig = run.get("result_json") or "{}"
+    orig_result = json.loads(result_json_orig)
+
+    # Build job due-date map from original result
+    job_due_dates: dict[int, float] = {}
+    for job_rec in orig_result.get("schedule", []):
+        pass  # due dates aren't in schedule ops; we'll load from JobRecord
+
+    db = SessionLocal()
+    try:
+        db_run = db.query(ScheduleRun).filter(ScheduleRun.task_id == task_id).first()
+        if not db_run:
+            raise HTTPException(status_code=404, detail="Run not found in DB.")
+
+        job_records = db.query(JobRecord).filter(JobRecord.run_id == db_run.id).all()
+        for jr in job_records:
+            try:
+                job_due_dates[int(jr.job_id)] = jr.due_date or 0
+            except (ValueError, TypeError):
+                pass
+
+        from models import Job, Operation, Machine
+        # Build synthetic jobs from schedule ops for metric computation
+        job_ops: dict[int, dict] = {}
+        for jid, oi, mid, st, et in schedule_tuples:
+            if jid not in job_ops:
+                job_ops[jid] = {"ops": [], "due_date": job_due_dates.get(jid, 9999)}
+            job_ops[jid]["ops"].append(Operation(mid, int(et - st)))
+
+        jobs = [
+            Job(jid, data["ops"], int(data["due_date"]), 1)
+            for jid, data in job_ops.items()
+        ]
+
+        makespan = compute_makespan(schedule_tuples)
+        total_tardiness = calculate_tardiness(schedule_tuples, jobs)
+        avg_flow = calculate_avg_flow_time(schedule_tuples, jobs)
+        on_time = calculate_on_time_percent(schedule_tuples, jobs)
+
+        # Build utilization
+        machine_ids = list({mid for _, _, mid, _, _ in schedule_tuples})
+        machines = [Machine(mid, []) for mid in machine_ids]
+        util_dict = calculate_utilization(schedule_tuples, machines)
+        utilization = [{"machine_id": mid, "utilization": u} for mid, u in util_dict.items()]
+
+        new_result = {
+            **orig_result,
+            "makespan": makespan,
+            "total_tardiness": int(total_tardiness),
+            "avg_flow_time": avg_flow,
+            "on_time_percent": on_time,
+            "algorithm": orig_result.get("algorithm", "MANUAL"),
+
+            "schedule": [
+                {"job_id": jid, "op_index": oi, "machine_id": mid, "start_time": st, "end_time": et}
+                for jid, oi, mid, st, et in schedule_tuples
+            ],
+            "utilization": [{"machine_id": u["machine_id"], "utilization": u["utilization"]} for u in utilization],
+        }
+
+        # Persist updated metrics
+        db_run.makespan = float(makespan)
+        db_run.total_tardiness = float(new_result["total_tardiness"])
+        db_run.avg_flow_time = float(avg_flow)
+        db_run.on_time_percent = float(on_time)
+        db_run.result_json = json.dumps(new_result)
+        db_run.algorithm = new_result["algorithm"]
+
+        # Update operation records
+        db.query(OperationRecord).filter(OperationRecord.run_id == db_run.id).delete()
+        for jid, oi, mid, st, et in schedule_tuples:
+            db.add(OperationRecord(
+                run_id=db_run.id,
+                job_id=str(jid), op_index=oi,
+                machine_id=str(mid), start_time=st, end_time=et,
+            ))
+        db.commit()
+
+        logger.info(
+            "Manual schedule applied to run {}: makespan={}, conflicts={}",
+            task_id[:8], makespan, len(conflicts),
+        )
+
+        return ManualScheduleResult(
+            task_id=task_id,
+            makespan=float(makespan),
+            total_tardiness=float(new_result["total_tardiness"]),
+            avg_flow_time=float(avg_flow),
+            on_time_percent=float(on_time),
+            conflicts=conflicts,
+        )
+    finally:
+        db.close()
+

@@ -10,6 +10,7 @@ Tables:
   operation_records  — One row per machine operation in a run
   machine_health     — Sensor telemetry + failure probability per machine (Phase 4)
   maintenance_alerts — Predicted failure alerts with severity + resolution (Phase 4)
+  machine_shifts     — Shift schedule constraints per machine (Phase 5)
 """
 import datetime
 from typing import Optional, List
@@ -181,3 +182,38 @@ class MaintenanceAlert(Base):
     recommended_action: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     resolved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     resolved_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Shift Scheduling models
+# ---------------------------------------------------------------------------
+
+class MachineShift(Base):
+    """
+    Defines a named shift window for a machine.
+    Operations on this machine will only be scheduled within the shift window.
+
+    Example: Machine 1 works DAY shift (06:00–14:00), expressed as time-unit offsets.
+    For 1-hour time units over a 24h horizon:
+      shift_start=6, shift_end=14, days="mon,tue,wed,thu,fri"
+    """
+    __tablename__ = "machine_shifts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    machine_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    shift_name: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # e.g. "DAY", "EVENING", "NIGHT", "24H"
+    shift_start: Mapped[float] = mapped_column(
+        Float, nullable=False
+    )  # time-unit offset from day start (e.g. 6.0 = 06:00 in hourly units)
+    shift_end: Mapped[float] = mapped_column(
+        Float, nullable=False
+    )  # end of shift window (e.g. 14.0 = 14:00)
+    cycle_length: Mapped[float] = mapped_column(
+        Float, nullable=False, default=24.0
+    )  # period after which shift repeats (default 24 time-units)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, server_default=func.now()
+    )
