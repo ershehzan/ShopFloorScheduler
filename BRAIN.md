@@ -8,7 +8,7 @@ This document serves as the permanent knowledge base and single source of truth 
 
 *   **Project Name:** ShopFloorScheduler (also referred to as PyShop Scheduler)
 *   **Purpose:** An AI-powered production scheduling and optimization system designed to solve complex Job Shop Scheduling problems. It automatically generates near-optimal schedules that minimize makespan (total completion time) and job tardiness while honoring real-world constraints such as machine unavailability/maintenance windows and setup times.
-*   **Current Development Stage:** Phase 1 complete. A Next.js (TypeScript) dashboard frontend and a FastAPI backend with SQLAlchemy/SQLite database integration have been built.
+*   **Current Development Stage:** Phase 5 complete. All phases (1-5) are fully implemented.
     *   **High-Level Architecture:**
     *   **Frontend:** React/Next.js dashboard app.
     *   **Backend:** FastAPI web server implementing RESTful APIs.
@@ -54,27 +54,58 @@ ShopFloorScheduler/
 │   ├── routers/                 # API Routes
 │   │   ├── health.py            # System health checks
 │   │   ├── history.py           # Paginated database query history (TASK-15)
-│   │   └── schedule.py          # Upload, status, download, and execution endpoints (TASK-13/14)
+│   │   ├── schedule.py          # Upload, status, download, and execution endpoints (TASK-13/14)
+│   │   ├── auth.py              # JWT authentication (Phase 3)
+│   │   ├── analytics.py         # Analytics summary, trends, heatmap (Phase 3)
+│   │   ├── reschedule.py        # Breakdown and rush order rescheduling (Phase 3)
+│   │   ├── ws.py                # WebSocket real-time progress (Phase 3)
+│   │   ├── maintenance.py       # Predictive maintenance alerts (Phase 4)
+│   │   ├── rl.py                # RL optimizer training and inference (Phase 4)
+│   │   ├── twin.py              # Digital twin simulation (Phase 4)
+│   │   ├── shifts.py            # Machine shift scheduling CRUD (Phase 5)
+│   │   └── assistant.py         # Natural language scheduling assistant (Phase 5)
 │   ├── __init__.py
-│   ├── main.py                  # API entry point & DB initialization
+│   ├── main.py                  # API entry point & DB initialization (v5.0.0)
 │   └── schemas.py               # Pydantic v2 validation contracts
+├── assistant/                   # NL Scheduling Assistant (Phase 5)
+│   ├── __init__.py
+│   ├── agent.py                 # Rule-based intent engine with DB-backed dispatch
+│   └── tools.py                 # Tool registry: get_latest_run, get_late_jobs, etc.
 ├── core/                        # Core Utilities
 │   ├── database.py              # SQLAlchemy engine, session helper, and table creation
 │   ├── logger.py                # Centralized Loguru logger (stdout + logs/ file)
-│   └── models_db.py             # SQLAlchemy ORM schemas
+│   ├── models_db.py             # SQLAlchemy ORM schemas (incl. Phase 5: MachineShift)
+│   └── security.py              # JWT creation/validation, get_current_user dep (Phase 3)
+├── ml/                          # Machine Learning (Phase 4)
+│   └── predictive_maintenance.py # Isolation Forest anomaly detection on sensor telemetry
+├── rl/                          # Reinforcement Learning (Phase 4)
+│   ├── environment.py           # Job shop scheduling RL environment
+│   └── q_agent.py               # Tabular Q-learning agent
+├── twin/                        # Digital Twin (Phase 4)
+│   └── simulator.py             # Discrete-event simulator with disruption injection
 ├── scheduler/                   # Core Scheduling Logic
 │   ├── engine.py                # Scheduling algorithms (FCFS, SPT, EDD, WSPT)
 │   ├── metrics.py               # Pure functions computing makespan, tardiness, utilization
+│   ├── rescheduler.py           # Dynamic rescheduling logic (breakdown + rush order)
 │   └── tasks.py                 # Asynchronous Celery task wrappers (unused by active endpoints)
-├── docs/                        # Project Requirements and Design Specs
-│   ├── DESIGN.md                # UI/UX guidelines and SaaS design tokens
-│   └── PRD.md                   # Product specs and phase roadmaps
 ├── frontend/                    # Next.js Frontend Application
 │   ├── src/                     # React source files
 │   │   ├── app/                 # App Router (layouts and pages)
 │   │   │   ├── (dashboard)/     # Main dashboard workspace layout
+│   │   │   │   ├── dashboard/   # Overview KPIs and recent runs
+│   │   │   │   ├── schedule/    # New schedule + results
+│   │   │   │   ├── history/     # Paginated run history
+│   │   │   │   ├── optimize/    # Algorithm comparison workspace
+│   │   │   │   ├── analytics/   # Charts: trends, heatmap, distribution
+│   │   │   │   ├── reports/     # Download schedule reports
+│   │   │   │   ├── maintenance/ # Predictive maintenance dashboard (Phase 4)
+│   │   │   │   ├── rl-optimizer/ # RL training config + reward chart (Phase 4)
+│   │   │   │   ├── digital-twin/ # Animated Gantt replay + event log (Phase 4)
+│   │   │   │   ├── shifts/      # Machine shift management CRUD (Phase 5)
+│   │   │   │   ├── assistant/   # AI scheduling assistant chat (Phase 5)
+│   │   │   │   └── settings/    # API configuration
 │   │   │   └── globals.css      # Core styles
-│   │   ├── components/          # Reusable UI widgets (Gantt, forms, status bars)
+│   │   ├── components/          # Reusable UI widgets
 │   │   └── lib/                 # Typed fetch client helpers (api.ts)
 │   ├── package.json             # NPM dependencies
 │   └── tsconfig.json            # TypeScript settings
@@ -439,11 +470,9 @@ The roadmap has been planned in distinct implementation phases:
 *   [x] **Dockerization:** Containerize backend, workers, and Next.js frontend.
 *   [x] **ERP Integration:** Integrate standard ERP inputs and outputs (generic JSON/Excel/CSV import adapter layers).
 
-### Phase 4: Advanced Intelligence Features (Complete)
-*   [x] **Predictive Maintenance:** Isolation Forest anomaly detection on synthetic sensor telemetry. `ml/predictive_maintenance.py` module with `SensorSimulator` + `MaintenancePredictor`. New REST endpoints under `/api/maintenance/`. Two new DB tables: `machine_health` and `maintenance_alerts`.
-*   [x] **Reinforcement Learning Optimizer:** Pure-Python tabular Q-learning agent (`rl/environment.py` + `rl/q_agent.py`). Background training API under `/api/rl/`. `algorithm=RL` now supported in the schedule upload endpoint.
-*   [x] **Digital Twin Simulation:** Discrete-event simulator (`twin/simulator.py`) replaying schedules in virtual time over WebSocket. REST control API under `/api/twin/`. Supports mid-simulation disruption injection (breakdowns, rush orders).
-*   [x] **Frontend Dashboards:** Three new premium pages: Predictive Maintenance (health rings + sparklines + alerts), RL Optimizer (training config + reward chart), Digital Twin (animated Gantt replay + event log).
+### Phase 5: Collaboration & Intelligence (Complete)
+*   [x] **Machine Shift Management:** CRUD API + frontend for per-machine working shift windows. `MachineShift` DB model, `/api/shifts` router, `/shifts` dashboard page with table, modal form, and filter.
+*   [x] **AI Scheduling Assistant:** Rule-based NL intent engine in `assistant/agent.py` + `assistant/tools.py`. `/api/assistant/chat` and `/api/assistant/prompts` endpoints. Premium chat UI at `/assistant` with markdown rendering, suggested prompt chips, tool-call badges, and auto-scroll.
 
 
 ---

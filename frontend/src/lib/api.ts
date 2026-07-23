@@ -482,3 +482,94 @@ export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
 }
+
+// ─── Phase 5: Machine Shift Scheduling ───────────────────────────────────────
+
+export interface MachineShift {
+  id: number;
+  machine_id: string;
+  shift_name: string;
+  shift_start: number; // time-unit offset within cycle (e.g. 6.0)
+  shift_end: number;   // time-unit offset within cycle (e.g. 14.0)
+  cycle_length: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MachineShiftIn {
+  machine_id: string;
+  shift_name: string;
+  shift_start: number;
+  shift_end: number;
+  cycle_length: number;
+  is_active: boolean;
+}
+
+/** GET /api/shifts?active_only=true|false */
+export async function getShifts(activeOnly: boolean = false): Promise<MachineShift[]> {
+  return apiFetch<MachineShift[]>(`/api/shifts?active_only=${activeOnly}`);
+}
+
+/** GET /api/shifts/machine/{machineId} */
+export async function getMachineShifts(machineId: string): Promise<MachineShift[]> {
+  return apiFetch<MachineShift[]>(`/api/shifts/machine/${encodeURIComponent(machineId)}`);
+}
+
+/** POST /api/shifts */
+export async function createShift(body: MachineShiftIn): Promise<MachineShift> {
+  return apiFetch<MachineShift>("/api/shifts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** PUT /api/shifts/{shiftId} */
+export async function updateShift(shiftId: number, body: MachineShiftIn): Promise<MachineShift> {
+  return apiFetch<MachineShift>(`/api/shifts/${shiftId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** DELETE /api/shifts/{shiftId} */
+export async function deleteShift(shiftId: number): Promise<void> {
+  return apiFetch<void>(`/api/shifts/${shiftId}`, { method: "DELETE" });
+}
+
+// ─── Phase 5: AI Scheduling Assistant ────────────────────────────────────────
+
+export interface AssistantMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AssistantToolCall {
+  tool_name: string;
+  arguments: Record<string, unknown>;
+  result_summary: string;
+}
+
+export interface AssistantChatResponse {
+  reply: string;
+  tool_calls: AssistantToolCall[];
+  suggested_prompts: string[];
+}
+
+/** POST /api/assistant/chat */
+export async function chatWithAssistant(
+  message: string,
+  history: AssistantMessage[] = []
+): Promise<AssistantChatResponse> {
+  return apiFetch<AssistantChatResponse>("/api/assistant/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+}
+
+/** GET /api/assistant/prompts */
+export async function getAssistantPrompts(): Promise<string[]> {
+  return apiFetch<string[]>("/api/assistant/prompts");
+}

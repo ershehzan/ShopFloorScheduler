@@ -639,7 +639,7 @@ class MachineShiftOut(BaseModel):
 class ManualOperationIn(BaseModel):
     """A manually repositioned operation in the Gantt editor."""
 
-    job_id: int = Field(..., ge=1)
+    job_id: int = Field(..., ge=0)
     op_index: int = Field(..., ge=0)
     machine_id: int = Field(..., ge=0)
     start_time: float = Field(..., ge=0.0)

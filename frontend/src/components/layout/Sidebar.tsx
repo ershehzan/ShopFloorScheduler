@@ -19,6 +19,8 @@ import {
   ShieldAlert,
   BrainCircuit,
   Cpu,
+  Clock,
+  MessageSquare,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -35,6 +37,11 @@ const PHASE4_NAV_ITEMS = [
   { href: "/maintenance", label: "Maintenance", icon: ShieldAlert },
   { href: "/rl-optimizer", label: "RL Optimizer", icon: BrainCircuit },
   { href: "/digital-twin", label: "Digital Twin", icon: Cpu },
+];
+
+const PHASE5_NAV_ITEMS = [
+  { href: "/shifts", label: "Shift Management", icon: Clock },
+  { href: "/assistant", label: "AI Assistant", icon: MessageSquare },
 ];
 
 interface SidebarProps {
@@ -220,6 +227,54 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     width: 3,
                     borderRadius: "0 99px 99px 0",
                     background: "var(--accent)",
+                  }}
+                />
+              )}
+              <Icon size={18} />
+              {!collapsed && <span>{label}</span>}
+            </Link>
+          );
+        })}
+
+        {/* Phase 5: Collaboration & Intelligence */}
+        <div style={{ height: 1, background: "var(--border)", margin: "12px 0" }} />
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.08em", padding: "6px 12px 6px", textTransform: "uppercase", display: collapsed ? "none" : "block" }}>
+          Collaboration
+        </div>
+        {PHASE5_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              title={collapsed ? label : undefined}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: collapsed ? "10px 0" : "10px 12px",
+                justifyContent: collapsed ? "center" : "flex-start",
+                borderRadius: "var(--radius-md)",
+                margin: "2px 0",
+                textDecoration: "none",
+                color: active ? "#10b981" : "var(--text-secondary)",
+                background: active ? "rgba(16, 185, 129, 0.08)" : "transparent",
+                fontWeight: active ? 600 : 400,
+                fontSize: "0.9375rem",
+                transition: "all var(--transition-fast)",
+                position: "relative",
+              }}
+            >
+              {active && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: "20%",
+                    bottom: "20%",
+                    width: 3,
+                    borderRadius: "0 99px 99px 0",
+                    background: "#10b981",
                   }}
                 />
               )}
