@@ -28,6 +28,7 @@ from api.schemas import (
 from core.database import get_db
 from core.logger import logger
 from core.models_db import MachineHealth, MaintenanceAlert
+from core.security import get_current_user, get_current_admin_user
 from ml.predictive_maintenance import (
     SensorSimulator,
     MaintenancePredictor,
@@ -55,6 +56,7 @@ def _get_predictor() -> MaintenancePredictor:
 def ingest_sensor_readings(
     payload: SensorIngestRequest,
     db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ):
     """
     Ingest sensor readings for one or more machines.
@@ -131,7 +133,11 @@ def ingest_sensor_readings(
 # ---------------------------------------------------------------------------
 
 @router.get("/health/{machine_id}", response_model=MachineHealthOut)
-def get_machine_health(machine_id: str, db: Session = Depends(get_db)):
+def get_machine_health(
+    machine_id: str,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
     """Return the most recent health reading for a machine."""
     row = (
         db.query(MachineHealth)
@@ -153,6 +159,7 @@ def get_machine_health_history(
     machine_id: str,
     limit: int = Query(default=48, ge=1, le=500),
     db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ):
     """Return recent health telemetry for a machine (ordered newest-first)."""
     rows = (
@@ -175,6 +182,7 @@ def list_alerts(
     resolved: Optional[bool] = None,
     severity: Optional[str] = None,
     db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ):
     """List maintenance alerts. Filterable by machine, severity, and resolved status."""
     q = db.query(MaintenanceAlert)
@@ -193,7 +201,11 @@ def list_alerts(
 # ---------------------------------------------------------------------------
 
 @router.post("/alerts/{alert_id}/resolve", response_model=MaintenanceAlertOut)
-def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+def resolve_alert(
+    alert_id: int,
+    db: Session = Depends(get_db),
+    _admin=Depends(get_current_admin_user),  # Admin-only action
+):
     """Mark a maintenance alert as resolved."""
     alert = db.query(MaintenanceAlert).filter(MaintenanceAlert.id == alert_id).first()
     if not alert:
@@ -216,6 +228,7 @@ def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
 def get_maintenance_forecast(
     machine_ids: Optional[str] = Query(default=None, description="Comma-separated machine IDs"),
     db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
 ):
     """
     Returns predicted unavailability windows per machine, ready to be injected

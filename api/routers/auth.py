@@ -11,8 +11,10 @@ Routes:
 """
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+
+from core.limiter import limiter
 
 from api.schemas import (
     RegisterRequest,
@@ -94,7 +96,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     response_model=TokenResponse,
     summary="Authenticate and receive JWT tokens",
 )
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
 
     if not user or not verify_password(body.password, user.hashed_password):

@@ -175,18 +175,18 @@ class TestProactiveBlockWindows:
 # ---------------------------------------------------------------------------
 
 class TestMaintenanceAPI:
-    def test_ingest_auto_generate(self, client):
+    def test_ingest_auto_generate(self, client, auth_headers):
         response = client.post("/api/maintenance/ingest", json={
             "auto_generate": True,
             "machine_ids": ["M1", "M2"],
             "n_readings": 5,
-        })
+        }, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 10  # 2 machines × 5 readings
 
-    def test_ingest_explicit_readings(self, client):
+    def test_ingest_explicit_readings(self, client, auth_headers):
         response = client.post("/api/maintenance/ingest", json={
             "auto_generate": False,
             "readings": [
@@ -197,48 +197,48 @@ class TestMaintenanceAPI:
                     "load_pct": 65.0,
                 }
             ],
-        })
+        }, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert len(data) == 1
         assert data[0]["machine_id"] == "M99"
 
-    def test_ingest_missing_both_raises_422(self, client):
+    def test_ingest_missing_both_raises_422(self, client, auth_headers):
         response = client.post("/api/maintenance/ingest", json={
             "auto_generate": False,
-        })
+        }, headers=auth_headers)
         assert response.status_code == 422
 
-    def test_get_machine_health(self, client):
+    def test_get_machine_health(self, client, auth_headers):
         # First ingest
         client.post("/api/maintenance/ingest", json={
             "auto_generate": True, "machine_ids": ["M_test"], "n_readings": 3
-        })
-        response = client.get("/api/maintenance/health/M_test")
+        }, headers=auth_headers)
+        response = client.get("/api/maintenance/health/M_test", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["machine_id"] == "M_test"
 
-    def test_get_machine_health_not_found(self, client):
-        response = client.get("/api/maintenance/health/NONEXISTENT_XYZ")
+    def test_get_machine_health_not_found(self, client, auth_headers):
+        response = client.get("/api/maintenance/health/NONEXISTENT_XYZ", headers=auth_headers)
         assert response.status_code == 404
 
-    def test_list_alerts(self, client):
-        response = client.get("/api/maintenance/alerts")
+    def test_list_alerts(self, client, auth_headers):
+        response = client.get("/api/maintenance/alerts", headers=auth_headers)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
-    def test_get_forecast(self, client):
+    def test_get_forecast(self, client, auth_headers):
         # Ingest first
         client.post("/api/maintenance/ingest", json={
             "auto_generate": True, "machine_ids": ["F1", "F2"], "n_readings": 5
-        })
-        response = client.get("/api/maintenance/forecast?machine_ids=F1,F2")
+        }, headers=auth_headers)
+        response = client.get("/api/maintenance/forecast?machine_ids=F1,F2", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert "windows" in data
         assert "generated_at" in data
 
-    def test_resolve_nonexistent_alert(self, client):
-        response = client.post("/api/maintenance/alerts/9999999/resolve")
+    def test_resolve_nonexistent_alert(self, client, admin_headers):
+        response = client.post("/api/maintenance/alerts/9999999/resolve", headers=admin_headers)
         assert response.status_code == 404

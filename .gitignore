@@ -13,6 +13,7 @@ __pycache__/
 .vscode/
 .idea/
 .next/
+tempCodeRunnerFile.py
 
 # CRITICAL: Ignore all credentials and sensitive environment files
 .env

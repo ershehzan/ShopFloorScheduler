@@ -141,4 +141,7 @@ def download_file(filename):
     return send_file(path, as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # NOTE: This is the legacy Flask prototype — the production entry point is
+    # api/main.py (FastAPI). Never run this in production with debug=True.
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(debug=debug_mode)

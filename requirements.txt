@@ -30,9 +30,10 @@ alembic>=1.13.0          # Schema migrations
 aiosqlite>=0.20.0        # Async SQLite driver (needed for SQLAlchemy async mode)
 psycopg2-binary>=2.9.0         # PostgreSQL driver (Phase 3)
 
-# ─── Phase 3: Authentication ─────────────────────────────────────────────
+# ─── Phase 3: Authentication & Rate Limiting ──────────────────────────────────
 python-jose[cryptography]>=3.3.0   # JWT token creation / validation
 passlib[bcrypt]>=1.7.4             # Password hashing (bcrypt backend)
+slowapi>=0.1.10                    # Rate limiting for auth routes
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
 pytest>=8.0.0

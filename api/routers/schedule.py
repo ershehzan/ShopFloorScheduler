@@ -527,9 +527,14 @@ async def upload_and_compare(
     original_filename = file.filename
     filepath = os.path.join(UPLOAD_FOLDER, f"{task_id}.xlsx")
     try:
-        contents = await file.read()
+        MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+        contents = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 10 MB.")
         with open(filepath, "wb") as f:
             f.write(contents)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Failed to save uploaded file: {}", str(e))
         raise HTTPException(status_code=500, detail="Failed to save uploaded file.")
@@ -691,9 +696,14 @@ async def upload_and_schedule(
     original_filename = file.filename
     filepath = os.path.join(UPLOAD_FOLDER, f"{task_id}.xlsx")
     try:
-        contents = await file.read()
+        MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+        contents = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 10 MB.")
         with open(filepath, "wb") as f:
             f.write(contents)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Failed to save uploaded file: {}", str(e))
         raise HTTPException(status_code=500, detail="Failed to save uploaded file.")
@@ -839,6 +849,14 @@ async def download_file(
     filename: str,
     current_user=Depends(get_current_user),
 ) -> FileResponse:
+    import pathlib
+
+    # --- Path traversal guard ---
+    safe_root = pathlib.Path(OUTPUT_FOLDER).resolve()
+    requested_path = (safe_root / filename).resolve()
+    if not str(requested_path).startswith(str(safe_root) + os.sep) and requested_path != safe_root:
+        raise HTTPException(status_code=400, detail="Invalid filename.")
+
     # Extract task_id from filename to check ownership
     task_id = filename
     if filename.startswith("schedule_") and filename.endswith(".xlsx"):
@@ -851,11 +869,10 @@ async def download_file(
         if not current_user.is_admin and current_user.id != run["user_id"]:
             raise HTTPException(status_code=403, detail="Access denied to this schedule run.")
 
-    path = os.path.join(OUTPUT_FOLDER, filename)
-    if not os.path.exists(path):
+    if not requested_path.exists():
         raise HTTPException(status_code=404, detail=f"File '{filename}' not found.")
     return FileResponse(
-        path=path,
+        path=str(requested_path),
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

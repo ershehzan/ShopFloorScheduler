@@ -5,11 +5,11 @@ services:
     container_name: shopfloor-db
     restart: always
     environment:
-      POSTGRES_USER: shopfloor_admin
-      POSTGRES_PASSWORD: admin_secret_pass_123
-      POSTGRES_DB: shopfloor_db
+      POSTGRES_USER: ${POSTGRES_USER:-shopfloor_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-shopfloor_db}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -20,6 +20,7 @@ services:
     image: redis:7-alpine
     container_name: shopfloor-redis
     restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     volumes:
@@ -36,11 +37,12 @@ services:
     restart: always
     command: sh -c "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://shopfloor_admin:admin_secret_pass_123@db:5432/shopfloor_db
-      - JWT_SECRET_KEY=change-me-in-production-secure-32-bytes-key-!!!
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-shopfloor_admin}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-shopfloor_db}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     ports:
       - "8000:8000"
     volumes:

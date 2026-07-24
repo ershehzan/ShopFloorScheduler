@@ -12,13 +12,15 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from api.routers import health, schedule, history, auth, analytics, reschedule, ws, maintenance, rl, twin, shifts, assistant
+from core.limiter import limiter
 from core.logger import logger
 
-# ---------------------------------------------------------------------------
-# App instance
-# ---------------------------------------------------------------------------
+is_prod = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 app = FastAPI(
     title="ShopFloorScheduler API",
@@ -29,10 +31,15 @@ app = FastAPI(
         "and digital twin simulation."
     ),
     version="5.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json",
 )
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # ---------------------------------------------------------------------------
 # CORS — allow Next.js frontend running on port 3000 (and any other origin in dev)
