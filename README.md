@@ -50,91 +50,208 @@ This tool helps factory managers optimize production by intelligently balancing 
 
 ---
 
+## Prerequisites
+
+Before running **PyShop Scheduler**, ensure you have the following installed on your machine:
+
+* **Python:** `3.10` or higher
+* **Node.js:** `v18.0` or higher (with `npm` v9+)
+* **Git:** Version control
+* *(Optional)* **Docker & Docker Compose:** For running the full stack containerized with PostgreSQL and Redis
+
+---
+
 ## Quick Start Guide
 
-### 1. Clone & Install
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/ershehzan/ShopFloorScheduler.git
 cd ShopFloorScheduler
-
-# Create virtual environment
-python -m venv .venv
-# Activate (Windows)
-.\.venv\Scripts\activate
-# Activate (Mac/Linux)
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### Step 2: Set Up Python Environment
 
-Copy `.env.example` to `.env` and fill in your values:
+1. Create a Python virtual environment:
+   ```bash
+   # Windows
+   python -m venv .venv
+   .\.venv\Scripts\activate
+
+   # Linux / macOS
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+2. Install Python dependencies:
+   ```bash
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+### Step 3: Environment Configuration
+
+Copy the example environment file to create your `.env` file:
 
 ```bash
+# Windows (PowerShell)
+copy .env.example .env
+
+# Linux / macOS / Git Bash
 cp .env.example .env
 ```
 
-Key variables:
-
-```
-DATABASE_URL=sqlite:///./shopfloor.db   # or postgresql://user:pass@host/db
-SECRET_KEY=your-secret-key-here
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-ALLOWED_ORIGINS=http://localhost:3000
+Default key configuration in `.env`:
+```ini
+DATABASE_URL=sqlite:///./shopfloor.db
+JWT_SECRET_KEY=your-secret-key-here
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 3. Prepare Data
-
-Your input file must be an Excel file (`.xlsx`) with two sheets:
-
-* **`Machines`**: Columns: `machine_id`, `unavailable_periods`
-* **`Jobs`**: Columns: `job_id`, `operations`, `due_date`, `priority`
-
-A sample `data.xlsx` is included in the repository.
-
-### 4. Run the Backend
-
-```bash
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Swagger UI → **`http://localhost:8000/docs`**
-
-### 5. Run the Frontend
+### Step 4: Install Frontend Dependencies
 
 ```bash
 cd frontend
 npm install
-npm run dev
+cd ..
 ```
-
-Open your browser → **`http://localhost:3000`**
-
-### 6. (Optional) Docker — Run Everything
-
-```bash
-docker-compose up --build
-```
-
-This starts the FastAPI backend, Next.js frontend, and (optionally) Redis for Celery workers.
 
 ---
 
-## Running Tests
+## How to Run the Project
+
+You can run **PyShop Scheduler** using any of the following methods depending on your workflow:
+
+### Method 1: Full-Stack Web Application (Recommended)
+
+Run the backend FastAPI server and Next.js frontend concurrently in separate terminal windows:
+
+#### 1. Start the FastAPI Backend (Terminal 1)
+```bash
+# Activate virtual environment if not already activated
+# Windows: .\.venv\Scripts\activate | Linux/Mac: source .venv/bin/activate
+
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+* **API Server:** `http://localhost:8000`
+* **Swagger API Documentation:** `http://localhost:8000/docs`
+* **ReDoc Documentation:** `http://localhost:8000/redoc`
+
+#### 2. Start the Next.js Frontend (Terminal 2)
+```bash
+cd frontend
+npm run dev
+```
+* **Web Dashboard:** `http://localhost:3000`
+
+---
+
+### Method 2: Docker Compose (All-in-One Stack)
+
+To run the complete system (FastAPI backend, Next.js frontend, PostgreSQL database, and Redis cache) inside Docker containers:
 
 ```bash
-# Run all 195 tests
-.venv\Scripts\python -m pytest tests/ -v
+# Build and start all services in detached mode
+docker-compose up --build -d
 
-# Run a specific module
-.venv\Scripts\python -m pytest tests/test_shifts.py -v
+# View real-time container logs
+docker-compose logs -f
+
+# Stop and remove containers
+docker-compose down
 ```
 
-Test modules cover: engine, metrics, GA, data loader, API endpoints, auth, analytics, WebSockets, rescheduler, maintenance, RL, digital twin, shifts, and manual Gantt editor.
+Access services:
+* **Frontend Web App:** `http://localhost:3000`
+* **FastAPI Backend:** `http://localhost:8000`
+* **Interactive API Docs:** `http://localhost:8000/docs`
+
+---
+
+### Method 3: Command-Line Interface (CLI / Headless Script)
+
+If you want to run scheduling algorithms directly against an Excel spreadsheet without launching web servers:
+
+1. Ensure input file `data.xlsx` is present in the project root directory.
+2. Run the main batch processing script:
+
+```bash
+python main.py
+```
+
+This will:
+* Load configuration from `config.ini`
+* Run FCFS, SPT, EDD, WSPT heuristics and the Genetic Algorithm
+* Display a formatted performance comparison table in your console
+* Save generated Gantt charts (`PNG`) and detailed schedule workbooks (`XLSX`) into the `output/` directory.
+
+---
+
+### Method 4: Legacy Standalone Flask App (Optional)
+
+For simplified lightweight testing using the legacy single-file Flask web UI:
+
+```bash
+python app.py
+```
+
+Access legacy interface:
+* **Flask Web Interface:** `http://localhost:5000`
+
+---
+
+## Input Data Format
+
+When uploading schedule datasets or running `main.py`, your input Excel file (`.xlsx`) must contain two sheets:
+
+1. **`Machines` Sheet:**
+   | Column Name | Description | Example |
+   |---|---|---|
+   | `machine_id` | Unique ID for machine | `M1`, `M2`, `M3` |
+   | `unavailable_periods` | List of maintenance downtime windows `(start, end)` | `[(10, 20), (50, 60)]` |
+
+2. **`Jobs` Sheet:**
+   | Column Name | Description | Example |
+   |---|---|---|
+   | `job_id` | Unique ID for job | `J1`, `J2` |
+   | `operations` | Operations list `[(machine_id, duration), ...]` | `[("M1", 5), ("M2", 3)]` |
+   | `due_date` | Target completion deadline | `25` |
+   | `priority` | Priority multiplier | `1` or `2` |
+
+A sample `data.xlsx` file is included in the project root for reference.
+
+---
+
+## Running Database Migrations
+
+Database tables are initialized automatically on FastAPI startup. If you make schema changes, apply Alembic migrations using:
+
+```bash
+# Apply pending migrations
+alembic upgrade head
+
+# Generate a new migration revision
+alembic revision --autogenerate -m "describe changes"
+```
+
+---
+
+## Running Automated Tests
+
+Run the comprehensive test suite with `pytest`:
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run tests with output logging
+python -m pytest tests/ -v -s
+
+# Run a specific test module (e.g., shifts or auth)
+python -m pytest tests/test_shifts.py -v
+python -m pytest tests/test_auth.py -v
+```
 
 ---
 
