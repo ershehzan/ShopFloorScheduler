@@ -4,8 +4,20 @@
  * All API calls go through these helpers so the base URL is configured once.
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const getBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    console.warn(
+      "[ShopFloorScheduler API] NEXT_PUBLIC_API_URL environment variable is not configured. Falling back to http://localhost:8000."
+    );
+  }
+  return "http://localhost:8000";
+};
+
+const BASE_URL = getBaseUrl();
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
