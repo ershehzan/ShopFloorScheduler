@@ -5,9 +5,13 @@
  */
 
 const getBaseUrl = (): string => {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  let envUrl = process.env.NEXT_PUBLIC_API_URL;
   if (envUrl) {
-    return envUrl.replace(/\/+$/, "");
+    envUrl = envUrl.trim().replace(/\/+$/, "");
+    if (envUrl.toLowerCase().endsWith("/api")) {
+      envUrl = envUrl.slice(0, -4);
+    }
+    return envUrl;
   }
   if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
     console.warn(
@@ -266,12 +270,22 @@ async function apiFetch<T>(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    let errorDetail = errorBody;
+    let errorDetail = "";
     try {
       const parsed = JSON.parse(errorBody);
-      errorDetail = parsed.detail || errorBody;
+      errorDetail = typeof parsed.detail === "string" ? parsed.detail : (parsed.message || errorBody);
     } catch {
-      // Ignore parsing errors
+      // Non-JSON response (e.g. HTML 404 or 502 page)
+    }
+
+    if (!errorDetail || errorDetail === "Not Found") {
+      if (response.status === 404) {
+        errorDetail = `Backend endpoint not found (404). Please verify NEXT_PUBLIC_API_URL (${BASE_URL}) and ensure the backend service is deployed and active.`;
+      } else if (response.status === 502 || response.status === 503) {
+        errorDetail = "Backend server is starting up or unavailable. Please wait a few seconds and try again.";
+      } else {
+        errorDetail = `HTTP ${response.status} server error.`;
+      }
     }
     throw new Error(errorDetail);
   }
