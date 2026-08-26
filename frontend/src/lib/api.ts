@@ -204,6 +204,7 @@ async function apiFetch<T>(
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
   }
+  headers.set("bypass-tunnel-reminder", "true");
 
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
   if (token && !headers.has("Authorization")) {
@@ -230,6 +231,7 @@ async function apiFetch<T>(
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
+            "bypass-tunnel-reminder": "true",
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         });
